@@ -149,6 +149,12 @@ Variant riscv_op : Type :=
 | DIVU                           (* Divides two unsigned registers *)
 | REM                            (* Remainder for two signed registers *)
 | REMU                           (* Remainder for two unsigned registers *)
+
+(* RISC-V 32Zbb min and max instructions *)
+| MIN
+| MINU
+| MAX
+| MAXU
 .
 
 #[ export ]
@@ -538,6 +544,30 @@ Definition riscv_REMU_instr : instr_desc_t := RTypeInstruction riscv_remu_semi "
 Definition prim_REMU := ("REMU"%string, primM REMU).
 
 
+(* RISC-V 32Zbb min and max instruccions *)
+Definition riscv_min_semi (wn wm : ty_r) : ty_r := if (wlt Signed wn wm) then wn else wm.
+
+Definition riscv_MIN_instr : instr_desc_t := RTypeInstruction riscv_min_semi "MIN" "min".
+Definition prim_MIN := ("MIN"%string, primM MIN).
+
+
+Definition riscv_minu_semi (wn wm : ty_r) : ty_r := if (wlt Unsigned wn wm) then wn else wm.
+
+Definition riscv_MINU_instr : instr_desc_t := RTypeInstruction riscv_minu_semi "MINU" "minu".
+Definition prim_MINU := ("MINU"%string, primM MINU).
+
+
+Definition riscv_max_semi (wn wm : ty_r) : ty_r := if (wlt Signed wn wm) then wm else wn.
+
+Definition riscv_MAX_instr : instr_desc_t := RTypeInstruction riscv_max_semi "MAX" "max".
+Definition prim_MAX := ("MAX"%string, primM MAX).
+
+
+Definition riscv_maxu_semi (wn wm : ty_r) : ty_r := if (wlt Unsigned wn wm) then wm else wn.
+
+Definition riscv_MAXU_instr : instr_desc_t := RTypeInstruction riscv_maxu_semi "MAXU" "maxu".
+Definition prim_MAXU := ("MAXU"%string, primM MAXU).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -577,6 +607,10 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | DIVU => riscv_DIVU_instr
   | REM => riscv_REM_instr
   | REMU => riscv_REMU_instr
+  | MIN => riscv_MIN_instr
+  | MINU => riscv_MINU_instr
+  | MAX => riscv_MAX_instr
+  | MAXU => riscv_MAXU_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -613,7 +647,11 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_DIV;
   prim_DIVU;
   prim_REM;
-  prim_REMU
+  prim_REMU;
+  prim_MIN;
+  prim_MINU;
+  prim_MAX;
+  prim_MAXU
 ].
 
 #[ export ]
