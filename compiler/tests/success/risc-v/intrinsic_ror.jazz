@@ -1,20 +1,17 @@
 export
-fn add(reg u32 arg0, reg u32 arg1) -> reg u32 {
+fn ror(reg u32 arg0, reg u32 arg1) -> reg u32 {
     reg u32 x;
 
     // Registers.
-    x = #ADD(arg0, arg1);
+    x = #ROR(arg0, arg1);
     [x] = x;
 
     // Immediates.
-    x = #ADDI(arg0, 1);
+    x = #RORI(arg0, 0);
     [x] = x;
-    x = #ADDI(arg0, -1);
+    x = #RORI(arg0, 1);
     [x] = x;
-    x = #ADDI(arg0, -2048);
-    x = #ADDI(x, 0);
-    [x] = x;
-    x = #ADDI(arg0,  2047);
+    x = #RORI(arg0, 31);
     [x] = x;
 
     reg u32 res;

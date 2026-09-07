@@ -160,6 +160,11 @@ Variant riscv_op : Type :=
 | ANDN
 | ORN
 | XNOR
+
+(* RISC-V 32Zbb rol, ror and rori instruccions *)
+| ROL
+| ROR
+| RORI
 .
 
 #[ export ]
@@ -592,6 +597,27 @@ Definition riscv_xnor_semi (wn wm : ty_r) : ty_r := wnot (wxor wn wm).
 Definition riscv_XNOR_instr : instr_desc_t := RTypeInstruction riscv_xnor_semi "XNOR" "xnor".
 Definition prim_XNOR := ("XNOR"%string, primM XNOR).
 
+(* RISC-V 32Zbb rol, ror and rori instruccions *)
+Definition riscv_rol_semi (wn : ty_r) (wm : word U8) : ty_r :=
+  let shamt := wunsigned (wand wm (wrepr U8 31)) in
+  if shamt == 0%Z then wn
+  else wor (wshl wn shamt) (wshr wn (32 - shamt)).
+
+Definition riscv_ROL_instr : instr_desc_t := RTypeInstruction riscv_rol_semi "ROL" "rol".
+Definition prim_ROL := ("ROL"%string, primM ROL).
+
+
+Definition riscv_ror_semi (wn : ty_r) (wm : word U8) : ty_r :=
+  let shamt := wunsigned (wand wm (wrepr U8 31)) in
+  if shamt == 0%Z then wn
+  else wor (wshr wn shamt) (wshl wn (32 - shamt)).
+
+Definition riscv_ROR_instr : instr_desc_t := RTypeInstruction riscv_ror_semi "ROR" "ror".
+Definition prim_ROR := ("ROR"%string, primM ROR).
+
+Definition riscv_RORI_instr : instr_desc_t := ITypeInstruction_5u riscv_ror_semi "RORI" "rori".
+Definition prim_RORI := ("RORI"%string, primM RORI).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -638,6 +664,9 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | ANDN => riscv_ANDN_instr
   | ORN => riscv_ORN_instr
   | XNOR => riscv_XNOR_instr
+  | ROL => riscv_ROL_instr
+  | ROR => riscv_ROR_instr
+  | RORI => riscv_RORI_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -681,7 +710,10 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_MAXU;
   prim_ANDN;
   prim_ORN;
-  prim_XNOR
+  prim_XNOR;
+  prim_ROL;
+  prim_ROR;
+  prim_RORI
 ].
 
 #[ export ]
