@@ -165,6 +165,10 @@ Variant riscv_op : Type :=
 | ROL
 | ROR
 | RORI
+
+(* RISC-V 32Zbb orc.b and rev8 instruccions *)
+| ORC_B
+| REV8
 .
 
 #[ export ]
@@ -618,6 +622,90 @@ Definition prim_ROR := ("ROR"%string, primM ROR).
 Definition riscv_RORI_instr : instr_desc_t := ITypeInstruction_5u riscv_ror_semi "RORI" "rori".
 Definition prim_RORI := ("RORI"%string, primM RORI).
 
+(* RISC-V 32Zbb orc.b and rev8 instruccions *)
+Definition riscv_orc_b_semi (wn : ty_r) : ty_r :=
+  let b0 := wand wn (wrepr U32 0x000000FF) in
+  let b1 := wand wn (wrepr U32 0x0000FF00) in
+  let b2 := wand wn (wrepr U32 0x00FF0000) in
+  let b3 := wand wn (wrepr U32 0xFF000000) in
+  let r0 := if b0 == (wrepr U32 0) then wrepr U32 0 else wrepr U32 0xFF in
+  let r1 := if b1 == (wrepr U32 0) then wrepr U32 0 else wrepr U32 0xFF in
+  let r2 := if b2 == (wrepr U32 0) then wrepr U32 0 else wrepr U32 0xFF in
+  let r3 := if b3 == (wrepr U32 0) then wrepr U32 0 else wrepr U32 0xFF in
+  wor
+    (wshl r0 0)
+    (wor
+      (wshl r1 8)
+      (wor
+        (wshl r2 16)
+        (wshl r3 24))).
+
+Definition riscv_ORC_B_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_orc_b_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "ORC_B";
+      id_safe := [::];
+      id_pp_asm := pp_name "orc.b";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+
+Definition prim_ORC_B := ("ORC_B"%string, primM ORC_B).
+
+
+Definition riscv_rev8_semi (wn : ty_r) : ty_r :=
+  let b0 := wand wn (wrepr U32 0x000000FF) in
+  let b1 := wand wn (wrepr U32 0x0000FF00) in
+  let b2 := wand wn (wrepr U32 0x00FF0000) in
+  let b3 := wand wn (wrepr U32 0xFF000000) in
+  wor
+    (wshl b0 24)
+    (wor
+      (wshl b1 8)
+      (wor
+        (wshr b2 8)
+        (wshr b3 24))).
+
+Definition riscv_REV8_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_rev8_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "REV8";
+      id_safe := [::];
+      id_pp_asm := pp_name "rev8";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+    
+Definition prim_REV8 := ("REV8"%string, primM REV8).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -667,6 +755,8 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | ROL => riscv_ROL_instr
   | ROR => riscv_ROR_instr
   | RORI => riscv_RORI_instr
+  | ORC_B => riscv_ORC_B_instr
+  | REV8 => riscv_REV8_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -713,7 +803,9 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_XNOR;
   prim_ROL;
   prim_ROR;
-  prim_RORI
+  prim_RORI;
+  prim_ORC_B;
+  prim_REV8
 ].
 
 #[ export ]
