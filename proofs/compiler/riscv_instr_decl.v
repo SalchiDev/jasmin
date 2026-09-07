@@ -155,6 +155,11 @@ Variant riscv_op : Type :=
 | MINU
 | MAX
 | MAXU
+
+(* RISC-V 32Zbb andn, orn and xorn instruccions *)
+| ANDN
+| ORN
+| XNOR
 .
 
 #[ export ]
@@ -568,6 +573,25 @@ Definition riscv_maxu_semi (wn wm : ty_r) : ty_r := if (wlt Unsigned wn wm) then
 Definition riscv_MAXU_instr : instr_desc_t := RTypeInstruction riscv_maxu_semi "MAXU" "maxu".
 Definition prim_MAXU := ("MAXU"%string, primM MAXU).
 
+
+(* RISC-V 32Zbb andn, orn and xorn instruccions *)
+Definition riscv_andn_semi (wn wm : ty_r) : ty_r := wand wn (wnot wm).
+
+Definition riscv_ANDN_instr : instr_desc_t := RTypeInstruction riscv_andn_semi "ANDN" "andn".
+Definition prim_ANDN := ("ANDN"%string, primM ANDN).
+
+
+Definition riscv_orn_semi (wn wm : ty_r) : ty_r := wor wn (wnot wm).
+
+Definition riscv_ORN_instr : instr_desc_t := RTypeInstruction riscv_orn_semi "ORN" "orn".
+Definition prim_ORN := ("ORN"%string, primM ORN).
+
+
+Definition riscv_xnor_semi (wn wm : ty_r) : ty_r := wnot (wxor wn wm).
+
+Definition riscv_XNOR_instr : instr_desc_t := RTypeInstruction riscv_xnor_semi "XNOR" "xnor".
+Definition prim_XNOR := ("XNOR"%string, primM XNOR).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -611,6 +635,9 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | MINU => riscv_MINU_instr
   | MAX => riscv_MAX_instr
   | MAXU => riscv_MAXU_instr
+  | ANDN => riscv_ANDN_instr
+  | ORN => riscv_ORN_instr
+  | XNOR => riscv_XNOR_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -651,7 +678,10 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_MIN;
   prim_MINU;
   prim_MAX;
-  prim_MAXU
+  prim_MAXU;
+  prim_ANDN;
+  prim_ORN;
+  prim_XNOR
 ].
 
 #[ export ]
