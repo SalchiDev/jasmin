@@ -169,6 +169,11 @@ Variant riscv_op : Type :=
 (* RISC-V 32Zbb orc.b and rev8 instruccions *)
 | ORC_B
 | REV8
+
+(* RISC-V 32Zbb sext.b, sext.h and zext.h instruccions *)
+| SEXT_B
+| SEXT_H
+| ZEXT_H
 .
 
 #[ export ]
@@ -706,6 +711,100 @@ Definition riscv_REV8_instr : instr_desc_t :=
     
 Definition prim_REV8 := ("REV8"%string, primM REV8).
 
+
+(* RISC-V 32Zbb sext.b, sext.h and zext.h instruccions *)
+Definition riscv_sext_b_semi (wn : ty_r) : ty_r := 
+sign_extend U32 (wrepr U8 (wunsigned (wand wn (wrepr U32 0xFF)))).
+
+
+Definition riscv_SEXT_B_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_sext_b_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "SEXT_B";
+      id_safe := [::];
+      id_pp_asm := pp_name "sext.b";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+
+Definition prim_SEXT_B := ("SEXT_B"%string, primM SEXT_B).
+
+
+Definition riscv_sext_h_semi (wn : ty_r) : ty_r := 
+sign_extend U32 (wrepr U16 (wunsigned (wand wn (wrepr U32 0xFFFF)))).
+
+
+Definition riscv_SEXT_H_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_sext_h_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "SEXT_H";
+      id_safe := [::];
+      id_pp_asm := pp_name "sext.h";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+
+Definition prim_SEXT_H := ("SEXT_H"%string, primM SEXT_H).
+
+
+Definition riscv_zext_h_semi (wn : ty_r) : ty_r := 
+zero_extend U32 (wrepr U16 (wunsigned (wand wn (wrepr U32 0xFFFF)))).
+
+
+Definition riscv_ZEXT_H_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_zext_h_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "ZEXT_H";
+      id_safe := [::];
+      id_pp_asm := pp_name "zext.h";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+
+Definition prim_ZEXT_H := ("ZEXT_H"%string, primM ZEXT_H).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -757,6 +856,9 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | RORI => riscv_RORI_instr
   | ORC_B => riscv_ORC_B_instr
   | REV8 => riscv_REV8_instr
+  | SEXT_B => riscv_SEXT_B_instr
+  | SEXT_H => riscv_SEXT_H_instr
+  | ZEXT_H => riscv_ZEXT_H_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -805,7 +907,10 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_ROR;
   prim_RORI;
   prim_ORC_B;
-  prim_REV8
+  prim_REV8;
+  prim_SEXT_B;
+  prim_SEXT_H;
+  prim_ZEXT_H
 ].
 
 #[ export ]
