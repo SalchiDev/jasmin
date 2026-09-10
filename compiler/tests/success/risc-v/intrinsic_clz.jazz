@@ -1,0 +1,12 @@
+export
+fn clz(reg u32 arg0) -> reg u32 {
+    reg u32 x;
+
+    // Registers.
+    x = #CLZ(arg0);
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}

@@ -174,6 +174,11 @@ Variant riscv_op : Type :=
 | SEXT_B
 | SEXT_H
 | ZEXT_H
+
+(* RISC-V 32Zbb clz, ctz and cpop instruccions *)
+| CLZ
+| CTZ
+| CPOP
 .
 
 #[ export ]
@@ -606,6 +611,7 @@ Definition riscv_xnor_semi (wn wm : ty_r) : ty_r := wnot (wxor wn wm).
 Definition riscv_XNOR_instr : instr_desc_t := RTypeInstruction riscv_xnor_semi "XNOR" "xnor".
 Definition prim_XNOR := ("XNOR"%string, primM XNOR).
 
+
 (* RISC-V 32Zbb rol, ror and rori instruccions *)
 Definition riscv_rol_semi (wn : ty_r) (wm : word U8) : ty_r :=
   let shamt := wunsigned (wand wm (wrepr U8 31)) in
@@ -805,6 +811,93 @@ Definition riscv_ZEXT_H_instr : instr_desc_t :=
 
 Definition prim_ZEXT_H := ("ZEXT_H"%string, primM ZEXT_H).
 
+(* RISC-V 32Zbb clz, ctz and cpop instruccions *)
+Definition riscv_clz_semi (wn : ty_r) : ty_r := leading_zero wn.
+
+Definition riscv_CLZ_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_clz_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "CLZ";
+      id_safe := [::];
+      id_pp_asm := pp_name "clz";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+    
+Definition prim_CLZ := ("CLZ"%string, primM CLZ).
+
+
+Definition riscv_ctz_semi (wn : ty_r) : ty_r := trailing_zero wn.
+
+Definition riscv_CTZ_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_ctz_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "CTZ";
+      id_safe := [::];
+      id_pp_asm := pp_name "ctz";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+    
+Definition prim_CTZ := ("CTZ"%string, primM CTZ).
+
+
+Definition riscv_cpop_semi (wn : ty_r) : ty_r := popcnt wn.
+
+Definition riscv_CPOP_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_cpop_semi in
+    {|
+      id_valid := true;
+      id_doit := DOIT;
+      id_msb_flag := MSB_MERGE;
+      id_tin := tin;
+      id_in := [:: Ea 1 ];
+      id_tout := [:: lreg ];
+      id_out := [:: Ea 0 ];
+      id_semi := sem_lprod_ok tin semi;
+      id_nargs := 2;
+      id_args_kinds := ak_reg_reg;
+      id_eq_size := refl_equal;
+      id_check_dest := refl_equal;
+      id_str_jas := pp_s "CPOP";
+      id_safe := [::];
+      id_pp_asm := pp_name "cpop";
+      id_safe_wf := refl_equal;
+      id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+      id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+    |}.
+    
+Definition prim_CPOP := ("CPOP"%string, primM CPOP).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -859,6 +952,9 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | SEXT_B => riscv_SEXT_B_instr
   | SEXT_H => riscv_SEXT_H_instr
   | ZEXT_H => riscv_ZEXT_H_instr
+  | CLZ => riscv_CLZ_instr
+  | CTZ => riscv_CTZ_instr
+  | CPOP => riscv_CPOP_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -910,7 +1006,10 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_REV8;
   prim_SEXT_B;
   prim_SEXT_H;
-  prim_ZEXT_H
+  prim_ZEXT_H;
+  prim_CLZ;
+  prim_CTZ;
+  prim_CPOP
 ].
 
 #[ export ]
