@@ -179,6 +179,11 @@ Variant riscv_op : Type :=
 | CLZ
 | CTZ
 | CPOP
+
+(* RISC-V 32Zba sh1add, sh2add and sh3add instruccions *)
+| SH1ADD
+| SH2ADD
+| SH3ADD
 .
 
 #[ export ]
@@ -898,6 +903,24 @@ Definition riscv_CPOP_instr : instr_desc_t :=
     
 Definition prim_CPOP := ("CPOP"%string, primM CPOP).
 
+(* RISC-V 32Zba sh1add, sh2add and sh3add instruccions *)
+Definition riscv_sh1add_semi (wn wm : ty_r) : ty_r := ((wshl wn 1) + wm)%w.
+
+Definition riscv_SH1ADD_instr : instr_desc_t := RTypeInstruction riscv_sh1add_semi "SH1ADD" "sh1add".
+Definition prim_SH1ADD := ("SH1ADD"%string, primM SH1ADD).
+
+
+Definition riscv_sh2add_semi (wn wm : ty_r) : ty_r := ((wshl wn 2) + wm)%w.
+
+Definition riscv_SH2ADD_instr : instr_desc_t := RTypeInstruction riscv_sh2add_semi "SH2ADD" "sh2add".
+Definition prim_SH2ADD := ("SH2ADD"%string, primM SH2ADD).
+
+
+Definition riscv_sh3add_semi (wn wm : ty_r) : ty_r := ((wshl wn 3) + wm)%w.
+
+Definition riscv_SH3ADD_instr : instr_desc_t := RTypeInstruction riscv_sh3add_semi "SH3ADD" "sh3add".
+Definition prim_SH3ADD := ("SH3ADD"%string, primM SH3ADD).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -955,6 +978,9 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | CLZ => riscv_CLZ_instr
   | CTZ => riscv_CTZ_instr
   | CPOP => riscv_CPOP_instr
+  | SH1ADD => riscv_SH1ADD_instr
+  | SH2ADD => riscv_SH2ADD_instr
+  | SH3ADD => riscv_SH3ADD_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -1009,7 +1035,10 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_ZEXT_H;
   prim_CLZ;
   prim_CTZ;
-  prim_CPOP
+  prim_CPOP;
+  prim_SH1ADD;
+  prim_SH2ADD;
+  prim_SH3ADD
 ].
 
 #[ export ]
