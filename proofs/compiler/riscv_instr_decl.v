@@ -184,6 +184,16 @@ Variant riscv_op : Type :=
 | SH1ADD
 | SH2ADD
 | SH3ADD
+
+(* RISC-V 32Zbs bclr, bext, binv and bset instructions *)
+| BCLR
+| BCLRI
+| BEXT
+| BEXTI
+| BINV
+| BINVI
+| BSET
+| BSETI
 .
 
 #[ export ]
@@ -921,6 +931,71 @@ Definition riscv_sh3add_semi (wn wm : ty_r) : ty_r := ((wshl wn 3) + wm)%w.
 Definition riscv_SH3ADD_instr : instr_desc_t := RTypeInstruction riscv_sh3add_semi "SH3ADD" "sh3add".
 Definition prim_SH3ADD := ("SH3ADD"%string, primM SH3ADD).
 
+
+(* RISC-V 32Zbs bclr, bext, binv and bset instructions *)
+Definition riscv_bclr_semi (wn wm : ty_r) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U32 31)) in
+  wand wn (wnot (wshl (wrepr U32 1) index)).
+
+Definition riscv_BCLR_instr : instr_desc_t := RTypeInstruction riscv_bclr_semi "BCLR" "bclr".
+Definition prim_BCLR := ("BCLR"%string, primM BCLR).
+
+
+Definition riscv_bclri_semi (wn : ty_r) (wm : word U8) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U8 31)) in
+  wand wn (wnot (wshl (wrepr U32 1) index)).
+
+Definition riscv_BCLRI_instr : instr_desc_t := ITypeInstruction_5u riscv_bclri_semi "BCLRI" "bclri".
+Definition prim_BCLRI := ("BCLRI"%string, primM BCLRI).
+
+
+Definition riscv_bext_semi (wn wm : ty_r) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U32 31)) in
+  wand (wshr wn index) (wrepr U32 1).
+
+Definition riscv_BEXT_instr : instr_desc_t := RTypeInstruction riscv_bext_semi "BEXT" "bext".
+Definition prim_BEXT := ("BEXT"%string, primM BEXT).
+
+
+Definition riscv_bexti_semi (wn : ty_r) (wm : word U8) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U8 31)) in
+  wand (wshr wn index) (wrepr U32 1).
+
+Definition riscv_BEXTI_instr : instr_desc_t := ITypeInstruction_5u riscv_bexti_semi "BEXTI" "bexti".
+Definition prim_BEXTI := ("BEXTI"%string, primM BEXTI).
+
+
+Definition riscv_binv_semi (wn wm : ty_r) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U32 31)) in
+  wxor wn (wshl (wrepr U32 1) index).
+
+Definition riscv_BINV_instr : instr_desc_t := RTypeInstruction riscv_binv_semi "BINV" "binv".
+Definition prim_BINV := ("BINV"%string, primM BINV).
+
+
+Definition riscv_binvi_semi (wn : ty_r) (wm : word U8) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U8 31)) in
+  wxor wn (wshl (wrepr U32 1) index).
+
+Definition riscv_BINVI_instr : instr_desc_t := ITypeInstruction_5u riscv_binvi_semi "BINVI" "binvi".
+Definition prim_BINVI := ("BINVI"%string, primM BINVI).
+
+
+Definition riscv_bset_semi (wn wm : ty_r) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U32 31)) in
+  wor wn (wshl (wrepr U32 1) index).
+
+Definition riscv_BSET_instr : instr_desc_t := RTypeInstruction riscv_bset_semi "BSET" "bset".
+Definition prim_BSET := ("BSET"%string, primM BSET).
+
+
+Definition riscv_bseti_semi (wn : ty_r) (wm : word U8) : ty_r :=
+  let index := wunsigned (wand wm (wrepr U8 31)) in
+  wor wn (wshl (wrepr U32 1) index).
+
+Definition riscv_BSETI_instr : instr_desc_t := ITypeInstruction_5u riscv_bseti_semi "BSETI" "bseti".
+Definition prim_BSETI := ("BSETI"%string, primM BSETI).
+
 (* -------------------------------------------------------------------- *)
 (* Description of instructions. *)
 
@@ -981,6 +1056,14 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | SH1ADD => riscv_SH1ADD_instr
   | SH2ADD => riscv_SH2ADD_instr
   | SH3ADD => riscv_SH3ADD_instr
+  | BCLR => riscv_BCLR_instr
+  | BCLRI => riscv_BCLRI_instr
+  | BEXT => riscv_BEXT_instr
+  | BEXTI => riscv_BEXTI_instr
+  | BINV => riscv_BINV_instr
+  | BINVI => riscv_BINVI_instr
+  | BSET => riscv_BSET_instr
+  | BSETI => riscv_BSETI_instr
   end.
 
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
@@ -1038,7 +1121,15 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_CPOP;
   prim_SH1ADD;
   prim_SH2ADD;
-  prim_SH3ADD
+  prim_SH3ADD;
+  prim_BCLR;
+  prim_BCLRI;
+  prim_BEXT;
+  prim_BEXTI;
+  prim_BINV;
+  prim_BINVI;
+  prim_BSET;
+  prim_BSETI
 ].
 
 #[ export ]

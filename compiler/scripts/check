@@ -32,7 +32,7 @@ elif [ $ARCH = "riscv" ]
 then
      # +m enables integer multiplication
      # +zbb enables basic bit manipulation
-     ASARGS="--triple=riscv32 --mcpu=generic-rv32 -mattr=+m,+zbb,+zba"
+     ASARGS="--triple=riscv32 --mcpu=generic-rv32 -mattr=+m,+zbb,+zba,+zbs"
 else
     ASARGS="--triple=x86_64"
 fi

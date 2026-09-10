@@ -1,0 +1,20 @@
+export
+fn binv(reg u32 arg0, reg u32 arg1) -> reg u32 {
+    reg u32 x;
+
+    // Registers.
+    x = #BINV(arg0, arg1);
+    [x] = x;
+
+    // Immediates.
+    x = #BINVI(arg0, 0);
+    [x] = x;
+    x = #BINVI(arg0, 1);
+    [x] = x;
+    x = #BINVI(arg0, 31);
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}

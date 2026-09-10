@@ -1,0 +1,20 @@
+export
+fn bext(reg u32 arg0, reg u32 arg1) -> reg u32 {
+    reg u32 x;
+
+    // Registers.
+    x = #BEXT(arg0, arg1);
+    [x] = x;
+
+    // Immediates.
+    x = #BEXTI(arg0, 0);
+    [x] = x;
+    x = #BEXTI(arg0, 1);
+    [x] = x;
+    x = #BEXTI(arg0, 31);
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}
