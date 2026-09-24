@@ -630,8 +630,7 @@ Definition prim_XNOR := ("XNOR"%string, primM XNOR).
 (* RISC-V 32Zbb rol, ror and rori instruccions *)
 Definition riscv_rol_semi (wn : ty_r) (wm : word U8) : ty_r :=
   let shamt := wunsigned (wand wm (wrepr U8 31)) in
-  if shamt == 0%Z then wn
-  else wor (wshl wn shamt) (wshr wn (32 - shamt)).
+  wor (wshl wn shamt) (wshr wn (32 - shamt)).
 
 Definition riscv_ROL_instr : instr_desc_t := RTypeInstruction riscv_rol_semi "ROL" "rol".
 Definition prim_ROL := ("ROL"%string, primM ROL).
@@ -639,8 +638,7 @@ Definition prim_ROL := ("ROL"%string, primM ROL).
 
 Definition riscv_ror_semi (wn : ty_r) (wm : word U8) : ty_r :=
   let shamt := wunsigned (wand wm (wrepr U8 31)) in
-  if shamt == 0%Z then wn
-  else wor (wshr wn shamt) (wshl wn (32 - shamt)).
+  wor (wshr wn shamt) (wshl wn (32 - shamt)).
 
 Definition riscv_ROR_instr : instr_desc_t := RTypeInstruction riscv_ror_semi "ROR" "ror".
 Definition prim_ROR := ("ROR"%string, primM ROR).
@@ -735,8 +733,7 @@ Definition prim_REV8 := ("REV8"%string, primM REV8).
 
 (* RISC-V 32Zbb sext.b, sext.h and zext.h instruccions *)
 Definition riscv_sext_b_semi (wn : ty_r) : ty_r := 
-sign_extend U32 (wrepr U8 (wunsigned (wand wn (wrepr U32 0xFF)))).
-
+sign_extend U32 (zero_extend U8 wn).
 
 Definition riscv_SEXT_B_instr : instr_desc_t :=
   let tin := [:: lreg ] in
@@ -766,8 +763,7 @@ Definition prim_SEXT_B := ("SEXT_B"%string, primM SEXT_B).
 
 
 Definition riscv_sext_h_semi (wn : ty_r) : ty_r := 
-sign_extend U32 (wrepr U16 (wunsigned (wand wn (wrepr U32 0xFFFF)))).
-
+sign_extend U32 (zero_extend U16 wn).
 
 Definition riscv_SEXT_H_instr : instr_desc_t :=
   let tin := [:: lreg ] in
@@ -797,8 +793,7 @@ Definition prim_SEXT_H := ("SEXT_H"%string, primM SEXT_H).
 
 
 Definition riscv_zext_h_semi (wn : ty_r) : ty_r := 
-zero_extend U32 (wrepr U16 (wunsigned (wand wn (wrepr U32 0xFFFF)))).
-
+zero_extend U32 (zero_extend U16 wn).
 
 Definition riscv_ZEXT_H_instr : instr_desc_t :=
   let tin := [:: lreg ] in
@@ -940,12 +935,7 @@ Definition riscv_bclr_semi (wn wm : ty_r) : ty_r :=
 Definition riscv_BCLR_instr : instr_desc_t := RTypeInstruction riscv_bclr_semi "BCLR" "bclr".
 Definition prim_BCLR := ("BCLR"%string, primM BCLR).
 
-
-Definition riscv_bclri_semi (wn : ty_r) (wm : word U8) : ty_r :=
-  let index := wunsigned (wand wm (wrepr U8 31)) in
-  wand wn (wnot (wshl (wrepr U32 1) index)).
-
-Definition riscv_BCLRI_instr : instr_desc_t := ITypeInstruction_5u riscv_bclri_semi "BCLRI" "bclri".
+Definition riscv_BCLRI_instr : instr_desc_t := ITypeInstruction_5u riscv_bclr_semi "BCLRI" "bclri".
 Definition prim_BCLRI := ("BCLRI"%string, primM BCLRI).
 
 
@@ -956,12 +946,7 @@ Definition riscv_bext_semi (wn wm : ty_r) : ty_r :=
 Definition riscv_BEXT_instr : instr_desc_t := RTypeInstruction riscv_bext_semi "BEXT" "bext".
 Definition prim_BEXT := ("BEXT"%string, primM BEXT).
 
-
-Definition riscv_bexti_semi (wn : ty_r) (wm : word U8) : ty_r :=
-  let index := wunsigned (wand wm (wrepr U8 31)) in
-  wand (wshr wn index) (wrepr U32 1).
-
-Definition riscv_BEXTI_instr : instr_desc_t := ITypeInstruction_5u riscv_bexti_semi "BEXTI" "bexti".
+Definition riscv_BEXTI_instr : instr_desc_t := ITypeInstruction_5u riscv_bext_semi "BEXTI" "bexti".
 Definition prim_BEXTI := ("BEXTI"%string, primM BEXTI).
 
 
@@ -972,12 +957,7 @@ Definition riscv_binv_semi (wn wm : ty_r) : ty_r :=
 Definition riscv_BINV_instr : instr_desc_t := RTypeInstruction riscv_binv_semi "BINV" "binv".
 Definition prim_BINV := ("BINV"%string, primM BINV).
 
-
-Definition riscv_binvi_semi (wn : ty_r) (wm : word U8) : ty_r :=
-  let index := wunsigned (wand wm (wrepr U8 31)) in
-  wxor wn (wshl (wrepr U32 1) index).
-
-Definition riscv_BINVI_instr : instr_desc_t := ITypeInstruction_5u riscv_binvi_semi "BINVI" "binvi".
+Definition riscv_BINVI_instr : instr_desc_t := ITypeInstruction_5u riscv_binv_semi "BINVI" "binvi".
 Definition prim_BINVI := ("BINVI"%string, primM BINVI).
 
 
@@ -988,12 +968,7 @@ Definition riscv_bset_semi (wn wm : ty_r) : ty_r :=
 Definition riscv_BSET_instr : instr_desc_t := RTypeInstruction riscv_bset_semi "BSET" "bset".
 Definition prim_BSET := ("BSET"%string, primM BSET).
 
-
-Definition riscv_bseti_semi (wn : ty_r) (wm : word U8) : ty_r :=
-  let index := wunsigned (wand wm (wrepr U8 31)) in
-  wor wn (wshl (wrepr U32 1) index).
-
-Definition riscv_BSETI_instr : instr_desc_t := ITypeInstruction_5u riscv_bseti_semi "BSETI" "bseti".
+Definition riscv_BSETI_instr : instr_desc_t := ITypeInstruction_5u riscv_bset_semi "BSETI" "bseti".
 Definition prim_BSETI := ("BSETI"%string, primM BSETI).
 
 (* -------------------------------------------------------------------- *)
