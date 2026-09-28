@@ -49,9 +49,18 @@ Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_exten
   | Ozeroext U32 ws' =>
       let%opt _ := oassert (ws' <= U16)%CMP in
       let%opt _ := oassert (is_load e) in
-      Some (BaseOp(None, LOAD Unsigned ws'), [:: e ])    
+      Some (BaseOp(None, LOAD Unsigned ws'), [:: e ]) 
+  | Olnot U32 =>
+    match e with
+    | Papp2 (Olxor _) e0 e1 =>
+        Some (BaseOp (None, XNOR), [:: e0; e1])
+    | _ =>
+        Some(BaseOp (None, NOT), [:: e])
+    end   
+  (*MILANESA
   | Olnot U32 =>
       Some(BaseOp (None, NOT), [:: e])
+  *)
   | Oneg (Op_w U32) =>
       Some(BaseOp (None, NEG), [:: e])
   | _ =>
@@ -118,7 +127,20 @@ Definition lower_Papp2
   (* MILANESA
   | Oland _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, AND)) (BaseOp(None, ANDI))
   *)
+  | Olor _ =>
+    match e0, e1 with
+    | e0, Papp1 (Olnot U32) e1 =>
+        Some (BaseOp (None, ORN), [:: e0; e1])
+    | Papp1 (Olnot U32) e0, e1 =>
+        Some (BaseOp (None, ORN), [:: e1; e0])
+    | _, _ =>
+        decide_op_reg_imm U32 e0 e1
+          (BaseOp(None, OR))
+          (BaseOp(None, ORI))
+    end
+  (*MILANESA
   | Olor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, OR)) (BaseOp(None, ORI))
+  *)
   | Olxor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, XOR)) (BaseOp(None, XORI))
   | Olsr U32 =>
     if check_shift_amount e1 is Some(e1) then
