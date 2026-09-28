@@ -15,7 +15,7 @@ export PREFIX
 all: build
 
 build:
-	$(MAKE) -C proofs all
+	#MILANESA $(MAKE) -C proofs all
 	$(MAKE) -C compiler CIL
 	$(MAKE) -C compiler all
 

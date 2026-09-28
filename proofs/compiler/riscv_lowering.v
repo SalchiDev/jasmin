@@ -104,7 +104,20 @@ Definition lower_Papp2
   | Omod sg (Op_w U32) =>
     let o := if sg is Signed then REM else REMU in
     Some (BaseOp (None, o), [:: e0; e1])
+  | Oland _ =>
+    match e0, e1 with
+    | e0, Papp1 (Olnot U32) e1 =>
+        Some (BaseOp (None, ANDN), [:: e0; e1])
+    | Papp1 (Olnot U32) e0, e1 =>
+        Some (BaseOp (None, ANDN), [:: e1; e0])
+    | _, _ =>
+        decide_op_reg_imm U32 e0 e1
+          (BaseOp(None, AND))
+          (BaseOp(None, ANDI))
+    end
+  (* MILANESA
   | Oland _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, AND)) (BaseOp(None, ANDI))
+  *)
   | Olor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, OR)) (BaseOp(None, ORI))
   | Olxor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, XOR)) (BaseOp(None, XORI))
   | Olsr U32 =>
