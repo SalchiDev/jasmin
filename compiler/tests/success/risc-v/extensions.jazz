@@ -1,0 +1,18 @@
+export
+fn extensions(reg u8 a, reg u16 b) -> reg u32 {
+    reg u32 x;
+
+    // Registers.
+    x = (32s) a;   // SEXT.B
+    [x] = x;
+
+    x = (32s) b;   // SEXT.H
+    [x] = x;
+
+    x = (32u) b;   // ZEXT.H
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}

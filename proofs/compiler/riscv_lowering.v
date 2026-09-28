@@ -43,13 +43,40 @@ Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_exten
       then  Some(BaseOp (None, LI), [:: Papp1 (Oword_of_int U32) e])
     else None
   | Osignext U32 ws' =>
+    let%opt _ := oassert (ws' <= U32)%CMP in
+    if is_load e then
+      Some (BaseOp(None, LOAD Signed ws'), [:: e])
+    else
+      match ws' with
+      | U8 =>
+          Some (BaseOp(None, SEXT_B), [:: e])
+      | U16 =>
+          Some (BaseOp(None, SEXT_H), [:: e])
+      | _ =>
+          None
+      end
+
+  | Ozeroext U32 ws' =>
+    let%opt _ := oassert (ws' <= U16)%CMP in
+    if is_load e then
+      Some (BaseOp(None, LOAD Unsigned ws'), [:: e])
+    else
+      match ws' with
+      | U16 =>
+          Some (BaseOp(None, ZEXT_H), [:: e])
+      | _ =>
+          None
+      end
+  (*MILANESA
+  | Osignext U32 ws' =>
       let%opt _ := oassert (ws' <= U32)%CMP in
       let%opt _ := oassert (is_load e) in
       Some (BaseOp(None, LOAD Signed ws'), [:: e ])
   | Ozeroext U32 ws' =>
       let%opt _ := oassert (ws' <= U16)%CMP in
       let%opt _ := oassert (is_load e) in
-      Some (BaseOp(None, LOAD Unsigned ws'), [:: e ]) 
+      Some (BaseOp(None, LOAD Unsigned ws'), [:: e ])
+  *) 
   | Olnot U32 =>
     match e with
     | Papp2 (Olxor _) e0 e1 =>
