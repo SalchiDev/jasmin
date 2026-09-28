@@ -1,0 +1,18 @@
+export
+fn shadd(reg u32 arg0, reg u32 arg1) -> reg u32 {
+    reg u32 x;
+
+    // Registers.
+    x = #SH1ADD(arg0, arg1);
+    [x] = x;
+    
+    x = #SH2ADD(arg0, arg1);
+    [x] = x;
+    
+    x = #SH3ADD(arg0, arg1);
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}

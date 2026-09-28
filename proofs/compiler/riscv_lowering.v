@@ -99,12 +99,46 @@ Definition decide_op_reg_imm_neg
   | _ => Some(op_reg_reg, [::e0; e1])
   end.
 
+(*MILANESA Ensure shift amount is 1 2 or 3 *)
+Definition lower_shadd (e0 e1 : pexpr) : option (riscv_extended_op * pexprs) :=
+  match e0, e1 with
+  | e, Papp2 (Olsl (Op_w U32)) b (Papp1 (Oword_of_int U8) (Pconst n)) =>
+      if n == 1%Z then
+        Some (BaseOp (None, SH1ADD), [:: b; e])
+      else if n == 2%Z then
+        Some (BaseOp (None, SH2ADD), [:: b; e])
+      else if n == 3%Z then
+        Some (BaseOp (None, SH3ADD), [:: b; e])
+      else None
+
+  | Papp2 (Olsl (Op_w U32)) b (Papp1 (Oword_of_int U8) (Pconst n)), e =>
+      if n == 1%Z then
+        Some (BaseOp (None, SH1ADD), [:: b; e])
+      else if n == 2%Z then
+        Some (BaseOp (None, SH2ADD), [:: b; e])
+      else if n == 3%Z then
+        Some (BaseOp (None, SH3ADD), [:: b; e])
+      else None
+
+  | _, _ => None
+  end.
+
 Definition lower_Papp2
   (ws : wsize) (op : sop2) (e0 e1 : pexpr) :
   option (riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
   match op with
+  | Oadd (Op_w _) =>
+    match lower_shadd e0 e1 with
+    | Some op => Some op
+    | None =>
+        decide_op_reg_imm U32 e0 e1
+          (BaseOp(None, ADD))
+          (BaseOp(None, ADDI))
+    end
+  (* MILANESA
   | Oadd (Op_w _) => decide_op_reg_imm U32 e0 e1 (BaseOp(None, ADD)) (BaseOp(None, ADDI))
+  *)
   | Omul (Op_w _) => Some (BaseOp (None, MUL), [:: e0; e1])
   | Osub (Op_w _) => decide_op_reg_imm_neg U32 e0 e1 (BaseOp(None, SUB)) (BaseOp(None, ADDI))
   | Odiv sg (Op_w U32) =>
@@ -169,7 +203,6 @@ Definition lower_Papp2
           Some (BaseOp (None, ROL), [:: e0; e1])
       end
     else None
-
   | Oror U32 =>
     if check_shift_amount e1 is Some(e1) then
       let op := if is_wconst U8 e1 then RORI else ROR in
