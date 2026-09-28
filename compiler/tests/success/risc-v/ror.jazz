@@ -1,0 +1,39 @@
+export
+fn ror(reg u32 arg0, reg u32 arg1) -> reg u32 {
+reg u32 x;
+
+    // Registers.
+    x = arg0 >>r (arg1 & 31);
+    [x] = x;
+
+    x = arg0;
+    x >>r= (arg1 & 31);
+    [x] = x;
+
+    // Immediates.
+    x = arg0;
+    x >>r= 5;
+    [x] = x;
+
+    x = arg0 >>r 0;
+    [x] = x;
+
+    x = arg0 >>r 31;
+    [x] = x;
+
+    // roli(x,n) = rori(x,32−n)
+    x = arg0;
+    x <<r= 27;
+    [x] = x;
+
+    x = arg0 <<r 0;
+    [x] = x;
+
+    x = arg0 <<r 1;
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+
+}

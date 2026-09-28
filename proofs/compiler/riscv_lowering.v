@@ -157,6 +157,24 @@ Definition lower_Papp2
       let op := if is_wconst U8 e1 then SRAI else SRA in
       Some (BaseOp (None, op), [:: e0; e1])
     else None
+  (*MILANESA*)
+  | Orol U32 =>
+    if check_shift_amount e1 is Some(e1) then
+      match is_wconst U8 e1 with
+      | Some n =>
+          let shamt := wunsigned n in
+          let n' := if shamt == 0%Z then Papp1 (Oword_of_int U8) (Pconst 0%Z) else Papp1 (Oword_of_int U8) (Pconst (32 - shamt)) in
+          Some (BaseOp (None, RORI), [:: e0; n'])
+      | None =>
+          Some (BaseOp (None, ROL), [:: e0; e1])
+      end
+    else None
+
+  | Oror U32 =>
+    if check_shift_amount e1 is Some(e1) then
+      let op := if is_wconst U8 e1 then RORI else ROR in
+      Some (BaseOp (None, op), [:: e0; e1])
+    else None
   | _ =>
       None
   end.
