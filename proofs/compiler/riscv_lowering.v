@@ -17,7 +17,8 @@ Require Import
   riscv_extra.
 
 Section Section.
-Context {atoI : arch_toIdent}.
+Context {atoI : arch_toIdent} 
+        (ext_B : bool).
 
 (* TODO : Review *)
 Definition chk_ws_reg (ws : wsize) : option unit :=
@@ -340,6 +341,7 @@ Fixpoint lower_i (i : instr) : cmd :=
       map (MkI ii) irs
 
  (* Copn : "assembly" instruction pattern matching, required for pseudo instructions or extra instructions *)
+ (*MILANESA checkear intrinseco pero no puede fallar*)
   | Copn lvs tag op es =>
       let seq_ir :=
         if lower_copn lvs op es is Some l
