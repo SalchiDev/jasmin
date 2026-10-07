@@ -173,7 +173,7 @@ Definition arm_fvars_correct
 
 Definition arm_loparams : lowering_params :=
   {|
-    lop_lower_i _ := lower_i;
+    lop_lower_i _ _ := lower_i;
     lop_fvars_correct := arm_fvars_correct;
   |}.
 

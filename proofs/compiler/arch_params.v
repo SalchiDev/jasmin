@@ -19,6 +19,7 @@ Record lowering_params
     (* Lower an instruction to architecture-specific instructions. *)
     lop_lower_i :
          (instr_info -> warning_msg -> instr_info)
+      -> lowering.lowering_options
       -> lowering.fresh_vars
       -> instr              (* Source instruction. *)
       -> cmd;

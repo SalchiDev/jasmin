@@ -327,6 +327,7 @@ Definition compiler_first_part (to_keep: seq funname) (p: uprog) : cexec uprog :
     lower_prog
       (lop_lower_i loparams)
       (warning cparams)
+      lowering.LO_NONE
       (fresh_var_ident cparams (Reg (Normal, Direct)) dummy_instr_info 0)
       pp
   in
