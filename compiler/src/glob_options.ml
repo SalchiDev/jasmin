@@ -27,6 +27,14 @@ let introduce_export_renaming = ref true
 let print_dependencies = ref false
 let lazy_regalloc = ref false
 
+let lowering_options = ref []
+
+let set_lowering_options s =
+  lowering_options := String.split_on_char ',' s
+
+let has_lopt opt =
+  List.mem opt !lowering_options
+
 let verbosity = ref 1
 
 let linting_level = ref 1
@@ -246,7 +254,8 @@ let options = [
     "-stack-zero-size",
       Arg.Symbol (List.map fst Annot.ws_strings, set_stack_zero_size),
       " Select stack zeroization size for export functions";
-    "-pliveness", Arg.Set print_liveness, " Print liveness information during register allocation"
+    "-pliveness", Arg.Set print_liveness, " Print liveness information during register allocation";
+    "-lopts", Arg.String set_lowering_options, "[options] Select lowering options (comma-separated, e.g. b,c)"
   ] @  List.map print_option Compiler.compiler_step_list @ List.map stop_after_option Compiler.compiler_step_list
 
 let usage_msg = "Usage : jasminc [option] filename"

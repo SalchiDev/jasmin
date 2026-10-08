@@ -195,6 +195,7 @@ Record compiler_params
   refresh_instr_info: funname -> _ufundef -> _ufundef;
   warning          : instr_info -> warning_msg -> instr_info;
   insert_renaming  : fun_info -> bool;
+  lowering_opts    : lowering_options;
   fresh_var_ident  : v_kind -> instr_info -> int -> string -> atype -> Ident.ident;
   spill_to_mmx     : var -> bool;
   slh_info         : _uprog → funname → seq slh_t * seq slh_t;
@@ -327,7 +328,7 @@ Definition compiler_first_part (to_keep: seq funname) (p: uprog) : cexec uprog :
     lower_prog
       (lop_lower_i loparams)
       (warning cparams)
-      lowering.LO_NONE
+      cparams.(lowering_opts)
       (fresh_var_ident cparams (Reg (Normal, Direct)) dummy_instr_info 0)
       pp
   in

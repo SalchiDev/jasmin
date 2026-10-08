@@ -446,6 +446,16 @@ let compile (type reg regx xreg rflag cond asm_op extra_op)
           p);
       Compiler.refresh_instr_info;
       Compiler.warning;
+      Compiler.lowering_opts =
+        (match !target_arch with
+        | RISCV ->
+            Lowering.LO_RISCV
+              {
+                Lowering.rv_lo_use_b = has_lopt "b";
+                Lowering.rv_lo_use_c = has_lopt "c";
+              }
+        | _ ->
+            Lowering.LO_NONE);
       Compiler.fresh_var_ident = Conv.fresh_var_ident;
       Compiler.spill_to_mmx;
       Compiler.slh_info;

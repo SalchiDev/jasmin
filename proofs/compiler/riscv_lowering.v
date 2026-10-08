@@ -17,7 +17,8 @@ Require Import
   riscv_extra.
 
 Section Section.
-Context {atoI : arch_toIdent}.
+Context {atoI : arch_toIdent}
+(options : lowering_options).
 
 (* TODO : Review *)
 Definition chk_ws_reg (ws : wsize) : option unit :=
@@ -35,6 +36,12 @@ Definition check_shift_amount e :=
   | _ => None 
   end.
 
+Definition use_B : bool :=
+  match options with
+  | LO_RISCV opts => opts.(rv_lo_use_b)
+  | LO_NONE => false
+  end.
+
 Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
   match op with
@@ -43,51 +50,49 @@ Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_exten
       then  Some(BaseOp (None, LI), [:: Papp1 (Oword_of_int U32) e])
     else None
   | Osignext U32 ws' =>
-    let%opt _ := oassert (ws' <= U32)%CMP in
-    if is_load e then
-      Some (BaseOp(None, LOAD Signed ws'), [:: e])
+    if use_B then
+      let%opt _ := oassert (ws' <= U32)%CMP in
+      if is_load e then
+        Some (BaseOp(None, LOAD Signed ws'), [:: e])
+      else
+        match ws' with
+        | U8 =>
+            Some (BaseOp(None, SEXT_B), [:: e])
+        | U16 =>
+            Some (BaseOp(None, SEXT_H), [:: e])
+        | _ =>
+            None
+        end
     else
-      match ws' with
-      | U8 =>
-          Some (BaseOp(None, SEXT_B), [:: e])
-      | U16 =>
-          Some (BaseOp(None, SEXT_H), [:: e])
-      | _ =>
-          None
-      end
-
-  | Ozeroext U32 ws' =>
-    let%opt _ := oassert (ws' <= U16)%CMP in
-    if is_load e then
-      Some (BaseOp(None, LOAD Unsigned ws'), [:: e])
-    else
-      match ws' with
-      | U16 =>
-          Some (BaseOp(None, ZEXT_H), [:: e])
-      | _ =>
-          None
-      end
-  (*MILANESA
-  | Osignext U32 ws' =>
       let%opt _ := oassert (ws' <= U32)%CMP in
       let%opt _ := oassert (is_load e) in
       Some (BaseOp(None, LOAD Signed ws'), [:: e ])
   | Ozeroext U32 ws' =>
+    if use_B then
+      let%opt _ := oassert (ws' <= U16)%CMP in
+      if is_load e then
+        Some (BaseOp(None, LOAD Unsigned ws'), [:: e])
+      else
+        match ws' with
+        | U16 =>
+            Some (BaseOp(None, ZEXT_H), [:: e])
+        | _ =>
+            None
+        end
+    else      
       let%opt _ := oassert (ws' <= U16)%CMP in
       let%opt _ := oassert (is_load e) in
       Some (BaseOp(None, LOAD Unsigned ws'), [:: e ])
-  *) 
   | Olnot U32 =>
-    match e with
-    | Papp2 (Olxor _) e0 e1 =>
-        Some (BaseOp (None, XNOR), [:: e0; e1])
-    | _ =>
-        Some(BaseOp (None, NOT), [:: e])
-    end   
-  (*MILANESA
-  | Olnot U32 =>
+    if use_B then
+      match e with
+      | Papp2 (Olxor _) e0 e1 =>
+          Some (BaseOp (None, XNOR), [:: e0; e1])
+      | _ =>
+          Some(BaseOp (None, NOT), [:: e])
+      end   
+    else
       Some(BaseOp (None, NOT), [:: e])
-  *)
   | Oneg (Op_w U32) =>
       Some(BaseOp (None, NEG), [:: e])
   | _ =>
@@ -126,7 +131,7 @@ Definition decide_op_reg_imm_neg
   | _ => Some(op_reg_reg, [::e0; e1])
   end.
 
-(*MILANESA Ensure shift amount is 1 2 or 3 *)
+(* Ensure shift amount is 1 2 or 3 *)
 Definition lower_shadd (e0 e1 : pexpr) : option (riscv_extended_op * pexprs) :=
   match e0, e1 with
   | e, Papp2 (Olsl (Op_w U32)) b (Papp1 (Oword_of_int U8) (Pconst n)) =>
@@ -156,16 +161,16 @@ Definition lower_Papp2
   let%opt _ := chk_ws_reg ws in
   match op with
   | Oadd (Op_w _) =>
-    match lower_shadd e0 e1 with
-    | Some op => Some op
-    | None =>
-        decide_op_reg_imm U32 e0 e1
-          (BaseOp(None, ADD))
-          (BaseOp(None, ADDI))
-    end
-  (* MILANESA
-  | Oadd (Op_w _) => decide_op_reg_imm U32 e0 e1 (BaseOp(None, ADD)) (BaseOp(None, ADDI))
-  *)
+    if use_B then
+      match lower_shadd e0 e1 with
+      | Some op => Some op
+      | None =>
+          decide_op_reg_imm U32 e0 e1
+            (BaseOp(None, ADD))
+            (BaseOp(None, ADDI))
+      end
+    else
+      decide_op_reg_imm U32 e0 e1 (BaseOp(None, ADD)) (BaseOp(None, ADDI))
   | Omul (Op_w _) => Some (BaseOp (None, MUL), [:: e0; e1])
   | Osub (Op_w _) => decide_op_reg_imm_neg U32 e0 e1 (BaseOp(None, SUB)) (BaseOp(None, ADDI))
   | Odiv sg (Op_w U32) =>
@@ -175,33 +180,33 @@ Definition lower_Papp2
     let o := if sg is Signed then REM else REMU in
     Some (BaseOp (None, o), [:: e0; e1])
   | Oland _ =>
-    match e0, e1 with
-    | e0, Papp1 (Olnot U32) e1 =>
-        Some (BaseOp (None, ANDN), [:: e0; e1])
-    | Papp1 (Olnot U32) e0, e1 =>
-        Some (BaseOp (None, ANDN), [:: e1; e0])
-    | _, _ =>
-        decide_op_reg_imm U32 e0 e1
-          (BaseOp(None, AND))
-          (BaseOp(None, ANDI))
-    end
-  (* MILANESA
-  | Oland _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, AND)) (BaseOp(None, ANDI))
-  *)
+    if use_B then
+      match e0, e1 with
+      | e0, Papp1 (Olnot U32) e1 =>
+          Some (BaseOp (None, ANDN), [:: e0; e1])
+      | Papp1 (Olnot U32) e0, e1 =>
+          Some (BaseOp (None, ANDN), [:: e1; e0])
+      | _, _ =>
+          decide_op_reg_imm U32 e0 e1
+            (BaseOp(None, AND))
+            (BaseOp(None, ANDI))
+      end
+    else
+      decide_op_reg_imm U32 e0 e1 (BaseOp(None, AND)) (BaseOp(None, ANDI))
   | Olor _ =>
-    match e0, e1 with
-    | e0, Papp1 (Olnot U32) e1 =>
-        Some (BaseOp (None, ORN), [:: e0; e1])
-    | Papp1 (Olnot U32) e0, e1 =>
-        Some (BaseOp (None, ORN), [:: e1; e0])
-    | _, _ =>
-        decide_op_reg_imm U32 e0 e1
-          (BaseOp(None, OR))
-          (BaseOp(None, ORI))
-    end
-  (*MILANESA
-  | Olor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, OR)) (BaseOp(None, ORI))
-  *)
+    if use_B then
+      match e0, e1 with
+      | e0, Papp1 (Olnot U32) e1 =>
+          Some (BaseOp (None, ORN), [:: e0; e1])
+      | Papp1 (Olnot U32) e0, e1 =>
+          Some (BaseOp (None, ORN), [:: e1; e0])
+      | _, _ =>
+          decide_op_reg_imm U32 e0 e1
+            (BaseOp(None, OR))
+            (BaseOp(None, ORI))
+      end
+    else
+      decide_op_reg_imm U32 e0 e1 (BaseOp(None, OR)) (BaseOp(None, ORI))
   | Olxor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, XOR)) (BaseOp(None, XORI))
   | Olsr U32 =>
     if check_shift_amount e1 is Some(e1) then
@@ -218,22 +223,25 @@ Definition lower_Papp2
       let op := if is_wconst U8 e1 then SRAI else SRA in
       Some (BaseOp (None, op), [:: e0; e1])
     else None
-  (*MILANESA*)
   | Orol U32 =>
-    if check_shift_amount e1 is Some(e1) then
-      match is_wconst U8 e1 with
-      | Some n =>
-          let shamt := wunsigned n in
-          let n' := if shamt == 0%Z then Papp1 (Oword_of_int U8) (Pconst 0%Z) else Papp1 (Oword_of_int U8) (Pconst (32 - shamt)) in
-          Some (BaseOp (None, RORI), [:: e0; n'])
-      | None =>
-          Some (BaseOp (None, ROL), [:: e0; e1])
-      end
+    if use_B then
+      if check_shift_amount e1 is Some(e1) then
+        match is_wconst U8 e1 with
+        | Some n =>
+            let shamt := wunsigned n in
+            let n' := if shamt == 0%Z then Papp1 (Oword_of_int U8) (Pconst 0%Z) else Papp1 (Oword_of_int U8) (Pconst (32 - shamt)) in
+            Some (BaseOp (None, RORI), [:: e0; n'])
+        | None =>
+            Some (BaseOp (None, ROL), [:: e0; e1])
+        end
+      else None
     else None
   | Oror U32 =>
-    if check_shift_amount e1 is Some(e1) then
-      let op := if is_wconst U8 e1 then RORI else ROR in
-      Some (BaseOp (None, op), [:: e0; e1])
+    if use_B then
+      if check_shift_amount e1 is Some(e1) then
+        let op := if is_wconst U8 e1 then RORI else ROR in
+        Some (BaseOp (None, op), [:: e0; e1])
+      else None
     else None
   | _ =>
       None

@@ -7,6 +7,7 @@ Definition fresh_vars : Type := string -> atype -> Ident.ident.
 Record rv_lowering_options :=
   {
     rv_lo_use_b : bool;
+    rv_lo_use_c : bool;
   }.
 
 Variant lowering_options :=
