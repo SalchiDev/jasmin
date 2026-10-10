@@ -115,6 +115,10 @@ Variant riscv_op : Type :=
 | ORI                            (* Bitwise OR with immediate *)
 | XOR                            (* Bitwise XOR with register *)
 | XORI                           (* Bitwise XOR with immediate *)
+| C_ANDI                         (* RV32C compressed AND with immedate *)
+| C_AND                          (* RV32C compressed AND with register *)
+| C_OR                           (* RV32C compressed OR *)
+| C_XOR                          (* RV32C compressed XOR *)
 
 (* Shift *)
 | SLL                            (* Shift Left Logical (by the 5 least significant bits of the second operand) *)
@@ -247,7 +251,7 @@ Definition riscv_SUB_instr : instr_desc_t := RTypeInstruction riscv_sub_semi "SU
 Definition prim_SUB := ("SUB"%string, primM SUB).
 
 Definition riscv_C_SUB_instr : instr_desc_t :=
-  let tin := [:: lreg; lreg ] in
+  let tin := [:: lreg; lword U32 ] in
   let semi := riscv_sub_semi in
   {|
     id_valid := true;
@@ -272,6 +276,7 @@ Definition riscv_C_SUB_instr : instr_desc_t :=
   |}.
 
 Definition prim_C_SUB := ("C_SUB"%string, primM C_SUB).
+
 
 (* Set less *)
 Definition riscv_slt_semi (wn wm : ty_r) : ty_r := if (wlt Signed wn wm) then 1%w else 0%w.
@@ -301,6 +306,58 @@ Definition prim_AND := ("AND"%string, primM AND).
 Definition riscv_ANDI_instr : instr_desc_t := ITypeInstruction_12s riscv_and_semi "ANDI" "andi".
 Definition prim_ANDI := ("ANDI"%string, primM ANDI).
 
+Definition riscv_C_AND_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U32 ] in
+  let semi := riscv_and_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0; Ervc 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_reg;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_AND";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.and";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_AND := ("C_AND"%string, primM C_AND).
+
+Definition riscv_C_ANDI_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U32 ] in
+  let semi := riscv_and_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0; Ea 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := [:: [:: [:: CAreg ]; [:: CAimm (Some CAimmC_riscv_6bits_signed) reg_size ] ] ];
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_ANDI";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.andi";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_ANDI := ("C_ANDI"%string, primM C_ANDI).
+
 
 Definition riscv_or_semi (wn wm : ty_r) : ty_r := wor wn wm.
 
@@ -310,6 +367,32 @@ Definition prim_OR := ("OR"%string, primM OR).
 Definition riscv_ORI_instr : instr_desc_t := ITypeInstruction_12s riscv_or_semi "ORI" "ori".
 Definition prim_ORI := ("ORI"%string, primM ORI).
 
+Definition riscv_C_OR_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U32 ] in
+  let semi := riscv_or_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0; Ervc 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_reg;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_OR";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.or";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_OR := ("C_OR"%string, primM C_OR).
+
 
 Definition riscv_xor_semi (wn wm : ty_r): ty_r := wxor wn wm.
 
@@ -318,6 +401,32 @@ Definition prim_XOR := ("XOR"%string, primM XOR).
 
 Definition riscv_XORI_instr : instr_desc_t := ITypeInstruction_12s riscv_xor_semi "XORI" "xori".
 Definition prim_XORI := ("XORI"%string, primM XORI).
+
+Definition riscv_C_XOR_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U32 ] in
+  let semi := riscv_xor_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0; Ervc 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_reg;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_XOR";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.xor";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_XOR := ("C_XOR"%string, primM C_XOR).
 
 
 (* Shift *)
@@ -1031,6 +1140,10 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | ORI => riscv_ORI_instr
   | XOR => riscv_XOR_instr
   | XORI => riscv_XORI_instr
+  | C_ANDI => riscv_C_ANDI_instr
+  | C_AND  => riscv_C_AND_instr
+  | C_OR   => riscv_C_OR_instr
+  | C_XOR  => riscv_C_XOR_instr
   | SLL => riscv_SLL_instr
   | SLLI => riscv_SLLI_instr
   | SRL => riscv_SRL_instr
@@ -1098,6 +1211,10 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_ORI;
   prim_XOR;
   prim_XORI;
+  prim_C_ANDI;
+  prim_C_AND;
+  prim_C_OR;
+  prim_C_XOR;
   prim_SLL;
   prim_SLLI;
   prim_SRL;
