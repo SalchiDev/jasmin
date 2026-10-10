@@ -100,6 +100,7 @@ Variant riscv_op : Type :=
 | ADD                            (* Add register without carry *)
 | ADDI                           (* Add immediate without carry *)
 | SUB                            (* Sub without carry *)
+| C_SUB                          (* RV32C compressed subtraction *)
 
 (* Set less *)
 | SLT                            (* Set less than *)
@@ -209,6 +210,20 @@ Canonical riscv_op_eqType := @ceqT_eqType _ eqTC_riscv_op.
 Notation ty_r := (sem_ltuple [:: lreg ]) (only parsing).
 Notation ty_rr := (sem_ltuple [:: lreg; lreg ]) (only parsing).
 
+
+(* -------------------------------------------------------------------- *)
+(* C extension restrictions. *)
+
+Definition rvc_excluded_registers : seq register :=
+  [:: RA; SP; X5; X6; X7;
+      X16; X17; X18; X19; X20; X21;
+      X22; X23; X24; X25; X26; X27;
+      X28; X29; X30; X31 ].
+
+Definition Ervc n :=
+  ADExplicit (AK_mem Aligned) n
+    (ACR_subset rvc_excluded_registers).
+
 (* -------------------------------------------------------------------- *)
 (* Instruction semantics and description. *)
 
@@ -231,6 +246,32 @@ Definition riscv_sub_semi (wn wm : ty_r) : ty_r := (wn - wm)%w.
 Definition riscv_SUB_instr : instr_desc_t := RTypeInstruction riscv_sub_semi "SUB" "sub".
 Definition prim_SUB := ("SUB"%string, primM SUB).
 
+Definition riscv_C_SUB_instr : instr_desc_t :=
+  let tin := [:: lreg; lreg ] in
+  let semi := riscv_sub_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    (* c.sub rd', rs2': rd' is both source and destination. *)
+    id_in := [:: Ervc 0; Ervc 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_reg;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_SUB";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.sub";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_SUB := ("C_SUB"%string, primM C_SUB).
 
 (* Set less *)
 Definition riscv_slt_semi (wn wm : ty_r) : ty_r := if (wlt Signed wn wm) then 1%w else 0%w.
@@ -979,6 +1020,7 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | ADD => riscv_ADD_instr
   | ADDI => riscv_ADDI_instr
   | SUB => riscv_SUB_instr
+  | C_SUB => riscv_C_SUB_instr
   | SLT => riscv_SLT_instr
   | SLTI => riscv_SLTI_instr
   | SLTU => riscv_SLTU_instr
@@ -1045,6 +1087,7 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_ADD;
   prim_ADDI;
   prim_SUB;
+  prim_C_SUB;
   prim_SLT;
   prim_SLTI;
   prim_SLTU;
