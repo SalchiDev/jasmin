@@ -1,0 +1,13 @@
+export
+fn c_srli(reg u32 arg0) -> reg u32 {
+    reg u32 x;
+
+    // Immediates.
+    x = #C_SRLI(arg0, 1);
+    x = #C_SRLI(x, 31);
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}

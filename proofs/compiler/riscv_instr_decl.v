@@ -99,6 +99,7 @@ Variant riscv_op : Type :=
 (* Arithmetic *)
 | ADD                            (* Add register without carry *)
 | ADDI                           (* Add immediate without carry *)
+| C_ADD                          (* Compressed Add register *)
 | SUB                            (* Sub without carry *)
 | C_SUB                          (* RV32C compressed subtraction *)
 
@@ -127,9 +128,13 @@ Variant riscv_op : Type :=
 | SRLI                           (* Shift Right Logical with immediate (of 5 bits) *)
 | SRA                            (* Shift Right Arithmetic (by the 5 least significant bits of the second operand) *)
 | SRAI                           (* Shift Right Arithmetic with immediate (of 5 bits) *)
+| C_SRLI                         (* Compressed Shift Right Logical with immediate (of 5 bits) *)
+| C_SRAI                         (* Compressed Shift Right Arithmetic with immediate (of 5 bits) *)
+| C_SLLI                         (* Compressed Shift Left Logical with immediate (of 5 bits) *)
 
 (* Pseudo instruction : Other data processing instructions *)
 | MV                             (* Copy operand to destination *)
+| C_MV                           (* Compressed Copy operand to destination *)
 | LA                             (* Load address *)
 | LI                             (* Load immediate up to 32 bits *)
 
@@ -243,6 +248,32 @@ Definition prim_ADD := ("ADD"%string, primM ADD).
 
 Definition riscv_ADDI_instr : instr_desc_t := ITypeInstruction_12s riscv_add_semi "ADDI" "addi".
 Definition prim_ADDI := ("ADDI"%string, primM ADDI).
+
+Definition riscv_C_ADD_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U32 ] in
+  let semi := riscv_add_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ea 0; Ea 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ea 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_reg;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_ADD";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.add";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_ADD := ("C_ADD"%string, primM C_ADD).
 
 
 Definition riscv_sub_semi (wn wm : ty_r) : ty_r := (wn - wm)%w.
@@ -456,6 +487,93 @@ Definition riscv_SRAI_instr : instr_desc_t := ITypeInstruction_5u riscv_sra_semi
 Definition prim_SRAI := ("SRAI"%string, primM SRAI).
 
 
+Definition riscv_C_SRLI_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U8 ] in
+  let semi := riscv_srl_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0; Ea 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds :=
+      [:: [:: [:: CAreg ];
+               [:: CAimm (Some CAimmC_riscv_5bits_unsigned_non0) reg_size ] ] ];
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_SRLI";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.srli";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_SRLI := ("C_SRLI"%string, primM C_SRLI).
+
+
+Definition riscv_C_SRAI_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U8 ] in
+  let semi := riscv_sra_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0; Ea 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds :=
+      [:: [:: [:: CAreg ];
+               [:: CAimm (Some CAimmC_riscv_5bits_unsigned_non0) reg_size ] ] ];
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_SRAI";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.srai";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_SRAI := ("C_SRAI"%string, primM C_SRAI).
+
+
+Definition riscv_C_SLLI_instr : instr_desc_t :=
+  let tin := [:: lreg; lword U8 ] in
+  let semi := riscv_sll_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ea 0; Ea 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ea 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds :=
+      [:: [:: [:: CAreg ];
+               [:: CAimm (Some CAimmC_riscv_5bits_unsigned_non0) reg_size ] ] ];
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_SLLI";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.slli";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_SLLI := ("C_SLLI"%string, primM C_SLLI).
+
+
 (* Pseudo instruction : Other data processing instructions *)
 Definition riscv_MV_semi (wn : ty_r) : ty_r :=
   wn.
@@ -485,6 +603,32 @@ Definition riscv_MV_instr : instr_desc_t :=
     |}.
 
 Definition prim_MV := ("MV"%string, primM MV).
+
+Definition riscv_C_MV_instr : instr_desc_t :=
+  let tin := [:: lreg ] in
+  let semi := riscv_MV_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ea 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ea 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_reg;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_MV";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.mv";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_MV := ("C_MV"%string, primM C_MV).
 
 
 Definition riscv_LA_semi (wn : ty_r) : ty_r :=
@@ -1128,6 +1272,7 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   match mn with
   | ADD => riscv_ADD_instr
   | ADDI => riscv_ADDI_instr
+  | C_ADD  => riscv_C_ADD_instr
   | SUB => riscv_SUB_instr
   | C_SUB => riscv_C_SUB_instr
   | SLT => riscv_SLT_instr
@@ -1150,7 +1295,11 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | SRLI => riscv_SRLI_instr
   | SRA => riscv_SRA_instr
   | SRAI => riscv_SRAI_instr
+  | C_SRLI => riscv_C_SRLI_instr
+  | C_SRAI => riscv_C_SRAI_instr
+  | C_SLLI => riscv_C_SLLI_instr
   | MV => riscv_MV_instr
+  | C_MV   => riscv_C_MV_instr
   | LA => riscv_LA_instr
   | LI => riscv_LI_instr
   | NOT => riscv_NOT_instr
@@ -1199,6 +1348,7 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
 Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_ADD;
   prim_ADDI;
+  prim_C_ADD;
   prim_SUB;
   prim_C_SUB;
   prim_SLT;
@@ -1221,7 +1371,11 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_SRLI;
   prim_SRA;
   prim_SRAI;
+  prim_C_SRLI;
+  prim_C_SRAI;
+  prim_C_SLLI;
   prim_MV;
+  prim_C_MV;
   prim_LA;
   prim_LI;
   prim_NOT;
