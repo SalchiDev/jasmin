@@ -145,8 +145,11 @@ Notation rflag := empty.
 Variant riscv_caimm_cond :=
   | CAimmC_riscv_12bits_signed
   | CAimmC_riscv_5bits_unsigned
+  | CAimmC_riscv_5bits_unsigned_non0
   | CAimmC_riscv_6bits_signed
-  | CAimmC_riscv_5bits_unsigned_non0.
+  | CAimmC_riscv_6bits_signed_non0
+  | CAimmC_riscv_addi4spn
+  | CAimmC_riscv_addi16sp.
 
 #[ export ]
 Instance eqTC_riscv_caimm_cond : eqTypeC riscv_caimm_cond :=
@@ -160,20 +163,39 @@ Definition riscv_check_CAimm (checker : riscv_caimm_cond) ws (w : word ws) : boo
   | CAimmC_riscv_5bits_unsigned =>
      let i := wunsigned w in
      (i <=? 31)%Z
-  | CAimmC_riscv_6bits_signed =>
-     let i := wsigned w in
-     (-32 <=? i)%Z && (i <=? 31)%Z
   | CAimmC_riscv_5bits_unsigned_non0 =>
      let i := wunsigned w in
      (1 <=? i)%Z && (i <=? 31)%Z
+  | CAimmC_riscv_6bits_signed =>
+     let i := wsigned w in
+     (-32 <=? i)%Z && (i <=? 31)%Z
+  | CAimmC_riscv_6bits_signed_non0 =>
+    let i := wsigned w in
+    (-32 <=? i)%Z &&
+    (i <=? 31)%Z &&
+    negb (i =? 0)%Z
+  | CAimmC_riscv_addi4spn =>
+      let i := wunsigned w in
+      (4 <=? i)%Z &&
+      (i <=? 1020)%Z &&
+      (i mod 4 =? 0)%Z
+  | CAimmC_riscv_addi16sp =>
+      let i := wsigned w in
+      (-512 <=? i)%Z &&
+      (i <=? 496)%Z &&
+      negb (i =? 0)%Z &&
+      (i mod 16 =? 0)%Z
   end.
 
 Definition riscv_caimm_cond_pp (checker : riscv_caimm_cond) : string :=
   match checker with
   | CAimmC_riscv_12bits_signed => "[-2048, 2047]"
   | CAimmC_riscv_5bits_unsigned => "[0, 31]"
-  | CAimmC_riscv_6bits_signed => "[-32, 31]"
   | CAimmC_riscv_5bits_unsigned_non0 => "[1, 31]"
+  | CAimmC_riscv_6bits_signed => "[-32, 31]"
+  | CAimmC_riscv_6bits_signed_non0 => "[-32, 31], nonzero"
+  | CAimmC_riscv_addi4spn => "[4, 1020], multiple of 4"
+  | CAimmC_riscv_addi16sp => "[-512, 496], nonzero multiple of 16"
   end%string.
 
 #[ export ]

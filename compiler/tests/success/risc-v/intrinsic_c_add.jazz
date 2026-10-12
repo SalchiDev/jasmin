@@ -6,6 +6,11 @@ fn c_add(reg u32 arg0, reg u32 arg1) -> reg u32 {
     x = #C_ADD(arg0, arg1);
     [x] = x;
 
+    // Immediates.
+    x = #C_ADDI(x, -32);
+    x = #C_ADDI(x, 31);
+    [x] = x;
+
     reg u32 res;
     res = x;
     return res;
