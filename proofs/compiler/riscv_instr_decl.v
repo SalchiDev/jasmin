@@ -32,6 +32,16 @@ Definition pp_name name args :=
     pp_aop_args := map (fun a => (reg_size, a)) args;
   |}.
 
+Definition pp_c_lui (args : asm_args) : pp_asm_op :=
+  let args :=
+    match args with
+    | [:: rd; Imm ws w ] =>
+        [:: rd; Imm (wand w (wrepr ws 0xFFFFF)) ]
+    | _ => args
+    end
+  in
+  pp_name "c.lui" args.
+
 (* RISC-V declares encodings :
   - R type: reg reg -> reg (e.g.: ADD)
   - I type: reg imm -> reg (e.g.: ADDI)
@@ -811,7 +821,7 @@ Definition riscv_C_LI_instr : instr_desc_t :=
 Definition prim_C_LI := ("C_LI"%string, primM C_LI).
 
 Definition riscv_C_LUI_semi (wn : ty_r) : ty_r :=
-  wshl (sign_extend U32 (zero_extend U8 (wshl wn 2))) 10.
+  wshl (wsar (wshl wn 26) 26) 12.
 
 Definition riscv_C_LUI_instr : instr_desc_t :=
   let tin := [:: lword U32 ] in
@@ -831,7 +841,7 @@ Definition riscv_C_LUI_instr : instr_desc_t :=
     id_check_dest := refl_equal;
     id_str_jas := pp_s "C_LUI";
     id_safe := [::];
-    id_pp_asm := pp_name "c.lui";
+    id_pp_asm := pp_c_lui;
     id_safe_wf := refl_equal;
     id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
     id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
