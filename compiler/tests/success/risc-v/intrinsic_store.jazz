@@ -1,0 +1,12 @@
+export
+fn store(reg u32 arg, reg u32 value) {
+    [:u8 arg] = #STORE_8(value);
+
+    [:u16 arg] = #STORE_16(value);
+
+    [:u32 arg] = #STORE_32(value);
+
+    [:u8 arg + 1] = #STORE_8(value);
+    [:u16 arg + 2] = #STORE_16(value);
+    [:u32 arg + 4] = #STORE_32(value);
+}

@@ -142,6 +142,7 @@ Variant riscv_op : Type :=
 | LI                             (* Load immediate up to 32 bits *)
 | C_LI                           (* Compressed Load immediate *)
 | C_LUI                          (* Compressed Load upper immediate  *)
+| C_NOP                          (* Nothing *)
 
 (* Pseudo instruction : Negations *)
 | NOT                            (* 1's complement *)
@@ -149,9 +150,13 @@ Variant riscv_op : Type :=
 
 (* Loads *)
 | LOAD of signedness & wsize     (* Load 8 / 16 or 32-bit & signed / unsigned *)
+| C_LW                           (* Compressed Load *)
+| C_LWSP                         (* Compressed Load Stack Pointer *)
 
 (* Stores *)
 | STORE of wsize                 (* Store 8 / 16 or 32-bit values from the low bits of register to memory *)
+| C_SW                           (* Compressed Store *)
+| C_SWSP                         (* Compressed Store Stack Pointer *)
 
 (* RISC-V 32M Multiply instructions (operators). *)
 | MUL                            (* Multiply two registers and write the least significant 32 bits of the result *)
@@ -835,6 +840,35 @@ Definition riscv_C_LUI_instr : instr_desc_t :=
 Definition prim_C_LUI := ("C_LUI"%string, primM C_LUI).
 
 
+Definition riscv_C_NOP_semi : unit := tt.
+
+Definition riscv_C_NOP_instr : instr_desc_t :=
+  let tin := [::] in
+  let semi := riscv_C_NOP_semi in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [::];
+    id_tout := [::];
+    id_out := [::];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 0;
+    id_args_kinds := [:: [::] ];
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_NOP";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.nop";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_NOP := ("C_NOP"%string, primM C_NOP).
+
+
 (* Pseudo instruction : Negations *)
 Definition riscv_NOT_semi (wn : ty_r) : ty_r :=
   wnot wn.
@@ -952,6 +986,60 @@ Definition primS (f: signedness -> wsize -> riscv_op) :=
 Definition prim_LOAD := ("LOAD"%string, primS LOAD).
 
 
+Definition riscv_C_LW_instr : instr_desc_t :=
+  let tin := [:: lword U32 ] in
+  let semi := @riscv_extend_semi Signed reg_size U32 in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Eu 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ervc 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_addr;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_LW";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.lw";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+  Definition prim_C_LW:= ("C_LW"%string, primM C_LW).
+
+
+Definition riscv_C_LWSP_instr : instr_desc_t :=
+  let tin := [:: lword U32 ] in
+  let semi := @riscv_extend_semi Signed reg_size U32 in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Eu 1 ];
+    id_tout := [:: lreg ];
+    id_out := [:: Ea 0 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_addr;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_LWSP";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.lwsp";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+  Definition prim_C_LWSP:= ("C_LWSP"%string, primM C_LWSP).
+
+
 (* Stores *)
 Definition riscv_STORE_instr ws : instr_desc_t :=
   let tin := [:: lword ws ] in
@@ -979,6 +1067,57 @@ Definition riscv_STORE_instr ws : instr_desc_t :=
 
 Definition prim_STORE := ("STORE"%string, primP STORE).
 
+Definition riscv_C_SW_instr : instr_desc_t :=
+  let tin := [:: lword U32 ] in
+  let semi := @riscv_extend_semi Unsigned U32 U32 in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ervc 0 ];
+    id_tout := [:: lword U32 ];
+    id_out := [:: Eu 1 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_addr;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_SW";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.sw";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_SW := ("C_SW"%string, primM C_SW).
+
+Definition riscv_C_SWSP_instr : instr_desc_t :=
+  let tin := [:: lword U32 ] in
+  let semi := @riscv_extend_semi Unsigned U32 U32 in
+  {|
+    id_valid := true;
+    id_doit := DOIT;
+    id_msb_flag := MSB_MERGE;
+    id_tin := tin;
+    id_in := [:: Ea 0 ];
+    id_tout := [:: lword U32 ];
+    id_out := [:: Eu 1 ];
+    id_semi := sem_lprod_ok tin semi;
+    id_nargs := 2;
+    id_args_kinds := ak_reg_addr;
+    id_eq_size := refl_equal;
+    id_check_dest := refl_equal;
+    id_str_jas := pp_s "C_SWSP";
+    id_safe := [::];
+    id_pp_asm := pp_name "c.swsp";
+    id_safe_wf := refl_equal;
+    id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
+    id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
+  |}.
+
+Definition prim_C_SWSP:= ("C_SWSP"%string, primM C_SWSP).
 
 (* RISC-V 32M Multiply instructions (operators). *)
 Definition riscv_mul_semi (wn wm: ty_r) : ty_r := (wn * wm)%w.
@@ -1451,10 +1590,15 @@ Definition riscv_instr_desc (mn : riscv_op) : instr_desc_t :=
   | LI => riscv_LI_instr
   | C_LI => riscv_C_LI_instr
   | C_LUI => riscv_C_LUI_instr
+  | C_NOP  => riscv_C_NOP_instr
   | NOT => riscv_NOT_instr
   | NEG => riscv_NEG_instr
   | LOAD s ws => riscv_LOAD_instr s ws
+  | C_LW   => riscv_C_LW_instr
+  | C_LWSP => riscv_C_LWSP_instr
   | STORE ws => riscv_STORE_instr ws
+  | C_SW   => riscv_C_SW_instr
+  | C_SWSP => riscv_C_SWSP_instr
   | MUL => riscv_MUL_instr
   | MULH => riscv_MULH_instr
   | MULHU => riscv_MULHU_instr
@@ -1532,10 +1676,15 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_LI;
   prim_C_LI;
   prim_C_LUI;
+  prim_C_NOP;
   prim_NOT;
   prim_NEG;
   prim_LOAD;
+  prim_C_LW;
+  prim_C_LWSP;
   prim_STORE;
+  prim_C_SW;
+  prim_C_LWSP;
   prim_MUL;
   prim_MULH;
   prim_MULHU;
