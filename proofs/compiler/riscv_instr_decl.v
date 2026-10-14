@@ -354,8 +354,7 @@ Definition riscv_C_ADDI4SPN_instr : instr_desc_t :=
     id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
   |}.
 
-Definition prim_C_ADDI4SPN :=
-  ("C_ADDI4SPN"%string, primM C_ADDI4SPN).
+(* Not valid as Intrisic, uses SP: Definition prim_C_ADDI4SPN := ("C_ADDI4SPN"%string, primM C_ADDI4SPN). *)
 
 Definition riscv_C_ADDI16SP_instr : instr_desc_t :=
   let tin := [:: lreg; lword U32 ] in
@@ -383,8 +382,7 @@ Definition riscv_C_ADDI16SP_instr : instr_desc_t :=
     id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
   |}.
 
-Definition prim_C_ADDI16SP :=
-  ("C_ADDI16SP"%string, primM C_ADDI16SP).
+(* Not valid as Intrisic, uses SP: Definition prim_C_ADDI16SP := ("C_ADDI16SP"%string, primM C_ADDI16SP). *)
 
 Definition riscv_sub_semi (wn wm : ty_r) : ty_r := (wn - wm)%w.
 
@@ -1653,8 +1651,6 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_ADDI;
   prim_C_ADD;
   prim_C_ADDI;
-  prim_C_ADDI4SPN;
-  prim_C_ADDI16SP;
   prim_SUB;
   prim_C_SUB;
   prim_SLT;
