@@ -347,7 +347,7 @@ Fixpoint lower_i (i : instr) : cmd :=
       (* Reintroduce information instruction *)
       map (MkI ii) irs
 
- (*MILANESA checkear intrinseco pero no puede fallar*)
+ (* MILANESA checkear intrinseco de extension, pero no puede fallar *)
  (* Copn : "assembly" instruction pattern matching, required for pseudo instructions or extra instructions *)
   | Copn lvs tag op es =>
       let seq_ir :=

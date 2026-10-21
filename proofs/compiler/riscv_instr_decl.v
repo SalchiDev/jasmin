@@ -152,7 +152,7 @@ Variant riscv_op : Type :=
 | LI                             (* Load immediate up to 32 bits *)
 | C_LI                           (* Compressed Load immediate *)
 | C_LUI                          (* Compressed Load upper immediate  *)
-| C_NOP                          (* Nothing *)
+| C_NOP                          (* Compressed Nothing *)
 
 (* Pseudo instruction : Negations *)
 | NOT                            (* 1's complement *)
@@ -839,7 +839,7 @@ Definition riscv_C_LUI_instr : instr_desc_t :=
     id_check_dest := refl_equal;
     id_str_jas := pp_s "C_LUI";
     id_safe := [::];
-    id_pp_asm := pp_c_lui;
+    id_pp_asm := pp_c_lui;(* MILANESA pp_name "c.lui"; *) 
     id_safe_wf := refl_equal;
     id_semi_errty := fun _ => sem_lprod_ok_error tin semi;
     id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
@@ -993,7 +993,7 @@ Definition primS (f: signedness -> wsize -> riscv_op) :=
 
 Definition prim_LOAD := ("LOAD"%string, primS LOAD).
 
-
+(* MILANESA Eu deberia estar restringido como Eurvc y Eusp *)
 Definition riscv_C_LW_instr : instr_desc_t :=
   let tin := [:: lword U32 ] in
   let semi := @riscv_extend_semi Signed reg_size U32 in

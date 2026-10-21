@@ -32,7 +32,16 @@ elif [ $ARCH = "riscv" ]
 then
      # +m enables integer multiplication
      # +zbb enables basic bit manipulation
-     ASARGS="--triple=riscv32 --mcpu=generic-rv32 -mattr=+m,+zbb,+zba,+zbs,+c"
+     # +zba enables address bit manipulation
+     # +zbs enables single bit manipulation
+    RISCV_EXT="+m,+zbb,+zba,+zbs"
+
+    # +c enables compression
+    if [[ " $* " == *"-lopts c"* ]]; then
+        RISCV_EXT="+m,+c"
+    fi
+
+    ASARGS="--triple=riscv32 --mcpu=generic-rv32 -mattr=$RISCV_EXT"
 else
     ASARGS="--triple=x86_64"
 fi
