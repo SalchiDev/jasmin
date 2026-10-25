@@ -233,10 +233,57 @@ Definition is_valid_address (addr : reg_address) :=
   | _, _, _ => false
   end.
 
+Definition is_compressed_load_store (name : string) :=
+  (name == "C_LW"%string) ||
+  (name == "C_SW"%string) ||
+  (name == "C_LWSP"%string) ||
+  (name == "C_SWSP"%string).
+
+Definition valid_compressed_address (id : instr_desc_t) (addr : reg_address) : bool :=
+  let name := id.(id_str_jas) tt in
+  let is_lw_sw :=
+    (name == "C_LW"%string) || (name == "C_SW"%string) in
+  let valid_base :=
+    if is_lw_sw then
+      match addr.(ad_base) with
+      | Some base =>
+          (base == X8) || (base == X9) || (base == X10) ||
+          (base == X11) || (base == X12) || (base == X13) ||
+          (base == X14) || (base == X15)
+      | None => false
+      end
+    else
+      match addr.(ad_base) with
+      | Some SP => true
+      | _ => false
+      end in
+  let max_offset : Z := if is_lw_sw then 124%Z else 252%Z in
+  valid_base &&
+  (addr.(ad_offset) == None) &&
+  (addr.(ad_scale) == 0) &&
+  (Z.leb (wunsigned addr.(ad_disp)) max_offset) &&
+  (Z.eqb (Z.modulo (wunsigned addr.(ad_disp)) 4) 0).
+
+Definition check_compressed_load_store_args (id : instr_desc_t) (args : asm_args) : cexec unit :=
+  let name := id.(id_str_jas) tt in
+  if is_compressed_load_store name then
+    match args with
+    | [:: _; Addr (Areg addr)] =>
+        if valid_compressed_address id addr then
+          ok tt
+        else
+          Error (E.gen_error false None None (PPEstring "Invalid address for compressed load/store"))
+    | _ =>
+        Error (E.gen_error false None None (PPEstring "Invalid operands for compressed load/store"))
+    end
+  else
+    ok tt.
+
 Definition riscv_agparams : asm_gen_params :=
   {|
     agp_assemble_cond := assemble_cond;
     agp_is_valid_address := is_valid_address;
+    agp_check_asm_args := check_compressed_load_store_args;
   |}.
 
 (* ------------------------------------------------------------------------ *)

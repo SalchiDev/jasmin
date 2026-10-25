@@ -2,5 +2,5 @@ export
 fn c_sw(reg u32 arg, reg u32 value) {
     [:u32 arg] = #C_SW(value);
 
-    [:u32 arg + 4] = #C_SW(value);
+    [:u32 arg + 124] = #C_SW(value);
 }

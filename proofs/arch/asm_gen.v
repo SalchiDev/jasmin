@@ -154,6 +154,9 @@ Record asm_gen_params :=
       (* Assemble an expression into an architecture-specific condition. *)
     agp_is_valid_address : reg_address -> bool;
       (* Checks whether the addressing mode is supported on the given arch. *)
+    agp_check_asm_args : instr_desc_t -> asm_args -> cexec unit;
+      (* Architecture-specific validation of assembled instruction arguments. *)
+
   }.
 
 Context
@@ -511,6 +514,7 @@ Definition assemble_asm_op rip ii op (outx : lexprs) (inx : rexprs) :=
   Let _ := assert (check_sopn_args rip ii asm_args inx (zip id.(id_in) id.(id_tin)) &&
                      check_sopn_dests rip ii asm_args outx (zip id.(id_out) id.(id_tout)))
                   (E.internal_error ii "assemble_asm_opn: cannot check") in
+  Let _ := agp_check_asm_args agparams id asm_args in
   ok (op.2, asm_args).
 
 Definition assemble_asm_args rip ii args :=

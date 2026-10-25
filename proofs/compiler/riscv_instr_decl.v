@@ -1045,8 +1045,7 @@ Definition riscv_C_LWSP_instr : instr_desc_t :=
     id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
   |}.
 
-  Definition prim_C_LWSP:= ("C_LWSP"%string, primM C_LWSP).
-
+(* Not valid as Intrisic, uses SP: Definition Definition prim_C_LWSP:= ("C_LWSP"%string, primM C_LWSP). *)
 
 (* Stores *)
 Definition riscv_STORE_instr ws : instr_desc_t :=
@@ -1125,7 +1124,7 @@ Definition riscv_C_SWSP_instr : instr_desc_t :=
     id_semi_safe := fun _ => sem_lprod_ok_safe tin semi;
   |}.
 
-Definition prim_C_SWSP:= ("C_SWSP"%string, primM C_SWSP).
+(* Not valid as Intrisic, uses SP: Definition Definition prim_C_SWSP:= ("C_SWSP"%string, primM C_SWSP). *)
 
 (* RISC-V 32M Multiply instructions (operators). *)
 Definition riscv_mul_semi (wn wm: ty_r) : ty_r := (wn * wm)%w.
@@ -1687,10 +1686,8 @@ Definition riscv_prim_string : seq (string * prim_constructor riscv_op) := [::
   prim_NEG;
   prim_LOAD;
   prim_C_LW;
-  prim_C_LWSP;
   prim_STORE;
   prim_C_SW;
-  prim_C_LWSP;
   prim_MUL;
   prim_MULH;
   prim_MULHU;

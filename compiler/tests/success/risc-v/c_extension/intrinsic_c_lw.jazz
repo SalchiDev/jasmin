@@ -2,7 +2,7 @@ export
 fn c_lw(reg u32 arg) -> reg u32 {
     reg u32 a = #C_LW([:u32 arg]);
 
-    reg u32 b = #C_LW([:u32 arg + 4]);
+    reg u32 b = #C_LW([:u32 arg + 124]);
 
     a ^= b;
 

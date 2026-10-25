@@ -1,0 +1,13 @@
+export
+fn store(reg u32 arg, reg u32 val) -> reg u32 {
+    reg u32 x;
+    x = val;
+
+    [arg] = x;
+    [arg + 3] = x;
+    [arg - 3] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}
