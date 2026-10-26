@@ -239,26 +239,8 @@ Definition is_compressed_load_store (name : string) :=
   (name == "C_LWSP"%string) ||
   (name == "C_SWSP"%string).
 
-Definition valid_compressed_address (id : instr_desc_t) (addr : reg_address) : bool :=
-  let name := id.(id_str_jas) tt in
-  let is_lw_sw :=
-    (name == "C_LW"%string) || (name == "C_SW"%string) in
-  let valid_base :=
-    if is_lw_sw then
-      match addr.(ad_base) with
-      | Some base =>
-          (base == X8) || (base == X9) || (base == X10) ||
-          (base == X11) || (base == X12) || (base == X13) ||
-          (base == X14) || (base == X15)
-      | None => false
-      end
-    else
-      match addr.(ad_base) with
-      | Some SP => true
-      | _ => false
-      end in
+Definition valid_compressed_address (is_lw_sw : bool) (addr : reg_address) : bool :=
   let max_offset : Z := if is_lw_sw then 124%Z else 252%Z in
-  valid_base &&
   (addr.(ad_offset) == None) &&
   (addr.(ad_scale) == 0) &&
   (Z.leb (wunsigned addr.(ad_disp)) max_offset) &&
@@ -267,14 +249,18 @@ Definition valid_compressed_address (id : instr_desc_t) (addr : reg_address) : b
 Definition check_compressed_load_store_args (id : instr_desc_t) (args : asm_args) : cexec unit :=
   let name := id.(id_str_jas) tt in
   if is_compressed_load_store name then
+    let is_lw_sw := (name == "C_LW"%string) || (name == "C_SW"%string) in
     match args with
     | [:: _; Addr (Areg addr)] =>
-        if valid_compressed_address id addr then
+        if valid_compressed_address is_lw_sw addr then
           ok tt
         else
-          Error (E.gen_error false None None (PPEstring "Invalid address for compressed load/store"))
+          let range := if is_lw_sw then "[0-124]"%string else "[0-252]"%string in
+          Error (E.gen_error false None None
+            (PPEstring ("Invalid address for " ++ name ++ ": expected offset in " ++ range ++ " (multiple of 4)")%string))
     | _ =>
-        Error (E.gen_error false None None (PPEstring "Invalid operands for compressed load/store"))
+        Error (E.gen_error false None None
+          (PPEstring ("Invalid operands for " ++ name)%string))
     end
   else
     ok tt.

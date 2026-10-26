@@ -19,6 +19,7 @@ Variant arg_constrained_register :=
 | ACR_any
 | ACR_exact of var
 | ACR_subset of seq var
+| ACR_addr_subset of seq var
 .
 
 Variant arg_desc :=

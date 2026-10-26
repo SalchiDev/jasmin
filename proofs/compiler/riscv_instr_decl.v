@@ -249,6 +249,13 @@ Definition rvc_excluded_registers : seq register :=
       X22; X23; X24; X25; X26; X27;
       X28; X29; X30; X31 ].
 
+Definition sp_excluded_registers : seq register :=
+  [:: RA; X5; X6; X7; X8; X9; X10;
+      X11; X12; X13; X14; X15; X16; 
+      X17; X18; X19; X20; X21; X22; 
+      X23; X24; X25; X26; X27; X28; 
+      X29; X30; X31 ].
+
 Definition Ervc n :=
   ADExplicit (AK_mem Aligned) n
     (ACR_subset rvc_excluded_registers).
@@ -260,6 +267,14 @@ Definition Enosp n :=
 Definition Esp n :=
   ADExplicit (AK_mem Aligned) n
     (ACR_exact SP).
+
+Definition Eurvc n := 
+  ADExplicit (AK_mem Unaligned) n 
+    (ACR_addr_subset rvc_excluded_registers).
+
+Definition Eusp n := 
+  ADExplicit (AK_mem Unaligned) n 
+    (ACR_addr_subset sp_excluded_registers).
 
 (* -------------------------------------------------------------------- *)
 (* Instruction semantics and description. *)
@@ -993,7 +1008,6 @@ Definition primS (f: signedness -> wsize -> riscv_op) :=
 
 Definition prim_LOAD := ("LOAD"%string, primS LOAD).
 
-(* MILANESA Eu deberia estar restringido como Eurvc y Eusp *)
 Definition riscv_C_LW_instr : instr_desc_t :=
   let tin := [:: lword U32 ] in
   let semi := @riscv_extend_semi Signed reg_size U32 in
@@ -1002,7 +1016,7 @@ Definition riscv_C_LW_instr : instr_desc_t :=
     id_doit := DOIT;
     id_msb_flag := MSB_MERGE;
     id_tin := tin;
-    id_in := [:: Eu 1 ];
+    id_in := [:: Eurvc 1 ];
     id_tout := [:: lreg ];
     id_out := [:: Ervc 0 ];
     id_semi := sem_lprod_ok tin semi;
@@ -1029,7 +1043,7 @@ Definition riscv_C_LWSP_instr : instr_desc_t :=
     id_doit := DOIT;
     id_msb_flag := MSB_MERGE;
     id_tin := tin;
-    id_in := [:: Eu 1 ];
+    id_in := [:: Eusp 1 ];
     id_tout := [:: lreg ];
     id_out := [:: Ea 0 ];
     id_semi := sem_lprod_ok tin semi;
@@ -1084,7 +1098,7 @@ Definition riscv_C_SW_instr : instr_desc_t :=
     id_tin := tin;
     id_in := [:: Ervc 0 ];
     id_tout := [:: lword U32 ];
-    id_out := [:: Eu 1 ];
+    id_out := [:: Eurvc 1 ];
     id_semi := sem_lprod_ok tin semi;
     id_nargs := 2;
     id_args_kinds := ak_reg_addr;
@@ -1110,7 +1124,7 @@ Definition riscv_C_SWSP_instr : instr_desc_t :=
     id_tin := tin;
     id_in := [:: Ea 0 ];
     id_tout := [:: lword U32 ];
-    id_out := [:: Eu 1 ];
+    id_out := [:: Eusp 1 ];
     id_semi := sem_lprod_ok tin semi;
     id_nargs := 2;
     id_args_kinds := ak_reg_addr;

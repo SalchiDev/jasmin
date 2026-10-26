@@ -156,7 +156,6 @@ Record asm_gen_params :=
       (* Checks whether the addressing mode is supported on the given arch. *)
     agp_check_asm_args : instr_desc_t -> asm_args -> cexec unit;
       (* Architecture-specific validation of assembled instruction arguments. *)
-
   }.
 
 Context
