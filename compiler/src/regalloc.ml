@@ -738,64 +738,34 @@ module Regalloc (Arch : Arch_full.Arch)
       match lv with Lvar w -> Some w | _ -> None
     in
     let add = conflicts_add_one Arch.pointer_data Arch.reg_size Arch.asmOp in
-
     let add_subset cnf x rs =
       List.rev_map Conv.var_of_cvar rs |> 
-      List.fold_left (fun cnf r -> add vars tr Lnone (L.unloc x) r cnf) cnf in
-
-    let force_lval cnf ad arg =
-      let xarg =
-        match ad, arg with
-        | ADExplicit (_, ACR_addr_subset _), Lmem (_, _, _, e) ->
-            let rec find_base = function
-              | Pvar x when is_gkvar x -> Some x.gv
-              | Papp2 (_, e1, _) -> find_base e1
-              | _ -> None
-            in
-            find_base e
-        | _ -> var_of_lval arg
-      in
-      match ad with
-      | ADImplicit v
-      | ADExplicit (_, ACR_exact v) ->
-          Option.may
-            (fun x -> allocate_one x (Conv.var_of_cvar v) a)
-            xarg;
-          cnf
-
-      | ADExplicit (_, ACR_any) ->
-          cnf
-
-      | ADExplicit (_, ACR_subset rs)
-      | ADExplicit (_, ACR_addr_subset rs) ->
-          begin match xarg with
-          | Some x -> add_subset cnf x rs
-          | None -> cnf
-          end
+      List.fold_left (fun cnf r -> add vars tr Lnone (L.unloc x) r cnf) cnf
     in
-
-    let force_expr cnf ad arg =
+    let rec find_base = function
+      | Pvar x when is_gkvar x -> Some x.gv
+      | Papp2 (_, e1, _) -> find_base e1
+      | _ -> None
+    in
+    let var_of_addr_lval = function
+      | Lmem (_, _, _, e) -> find_base e
+      | _ -> None
+    in
+    let var_of_addr_expr = function
+      | Pload (_, _, addr) -> find_base addr
+      | _ -> None
+    in
+    let force_constraint get_var get_addr cnf ad arg =
       let xarg =
         match ad with
-        | ADExplicit (_, ACR_addr_subset _) ->
-          let rec find_base = function
-            | Pvar x when is_gkvar x -> Some x.gv
-            | Papp2 (_, e1, _) -> find_base e1
-            | _ -> None
-          in
-          let addr =
-            match arg with
-            | Pload (_, _, addr) -> addr
-            | _ -> arg
-          in
-          find_base addr
-        | _ -> var_of_expr arg
+        | ADExplicit (_, ACR_addr_subset _) -> get_addr arg
+        | _ -> get_var arg
       in
       match ad with
       | ADImplicit v
       | ADExplicit (_, ACR_exact v) ->
-        Option.may (fun x -> allocate_one x (Conv.var_of_cvar v) a) xarg;
-        cnf
+          Option.may (fun x -> allocate_one x (Conv.var_of_cvar v) a) xarg;
+          cnf
       | ADExplicit (_, ACR_any) -> cnf
       | ADExplicit (_, ACR_subset rs)
       | ADExplicit (_, ACR_addr_subset rs) ->
@@ -804,10 +774,9 @@ module Regalloc (Arch : Arch_full.Arch)
           | None -> cnf
           end
     in
-
     let id = get_instr_desc Arch.pointer_data Arch.reg_size Arch.asmOp op in
-    let cnf = List.fold_left2 force_lval cnf id.i_out lvs in
-    let cnf = List.fold_left2 force_expr cnf id.i_in es in
+    let cnf = List.fold_left2 (force_constraint var_of_lval var_of_addr_lval) cnf id.i_out lvs in
+    let cnf = List.fold_left2 (force_constraint var_of_expr var_of_addr_expr) cnf id.i_in es in
     cnf
 
 
