@@ -148,6 +148,7 @@ Variant riscv_caimm_cond :=
   | CAimmC_riscv_5bits_unsigned_non0
   | CAimmC_riscv_6bits_signed
   | CAimmC_riscv_6bits_signed_non0
+  | CAimmC_riscv_lui
   | CAimmC_riscv_addi4spn
   | CAimmC_riscv_addi16sp.
 
@@ -174,6 +175,12 @@ Definition riscv_check_CAimm (checker : riscv_caimm_cond) ws (w : word ws) : boo
     (-32 <=? i)%Z &&
     (i <=? 31)%Z &&
     negb (i =? 0)%Z
+  | CAimmC_riscv_lui =>
+      let i := wunsigned w in
+      ((1 <=? i)%Z && 
+      (i <=? 31)%Z) ||
+      ((1048544 <=? i)%Z && 
+      (i <=? 1048575)%Z)
   | CAimmC_riscv_addi4spn =>
       let i := wunsigned w in
       (4 <=? i)%Z &&
@@ -194,6 +201,7 @@ Definition riscv_caimm_cond_pp (checker : riscv_caimm_cond) : string :=
   | CAimmC_riscv_5bits_unsigned_non0 => "[1, 31]"
   | CAimmC_riscv_6bits_signed => "[-32, 31]"
   | CAimmC_riscv_6bits_signed_non0 => "[-32, 31], nonzero"
+  | CAimmC_riscv_lui => "[0xfffe0, 0xfffff] or [1, 31]"
   | CAimmC_riscv_addi4spn => "[4, 1020], multiple of 4"
   | CAimmC_riscv_addi16sp => "[-512, 496], nonzero multiple of 16"
   end%string.
