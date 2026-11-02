@@ -77,7 +77,7 @@ let pp_ext = function
 let pp_name_ext pp_op =
   Format.asprintf "%s%s" pp_op.pp_aop_name (pp_ext pp_op.pp_aop_ext)
 
-module RiscVTarget: AsmTarget
+module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
   with type reg = Riscv_decl.register
   and type regx = Arch_utils.empty
   and type xreg = Arch_utils.empty
@@ -105,19 +105,49 @@ module RiscVTarget: AsmTarget
 
   let function_directives = []
 
+(* MILANESA, No deberia ser +-16 en lugar de 4 para mantener el stack alineado? *)
   let function_header =
-    [
-      Instr ("addi", [ pp_register SP; pp_register SP; "-4"]);
-      Instr ("sw", [ pp_register RA;  pp_reg_address_aux (pp_register SP) None None None])
-    ]
+    if Config.use_c then
+      [
+        Instr ("c.addi", [ pp_register SP; "-4" ]);
+        Instr ("c.swsp", [ pp_register RA; pp_reg_address_aux (pp_register SP) (Some "0") None None ]);
+      ]
+    else
+      [
+        Instr ("addi", [ pp_register SP; pp_register SP; "-4" ]);
+        Instr ("sw", [ pp_register RA; pp_reg_address_aux (pp_register SP) None None None ]);
+      ]
 
   let function_tail =
-    [
-      Instr ("lw", [ pp_register RA;  pp_reg_address_aux (pp_register SP) None None None]);
-      Instr ("addi", [ pp_register SP; pp_register SP; "4"]);
-      Instr ("ret", [ ])
-    ]
+    if Config.use_c then
+      [
+        Instr ("c.lwsp", [ pp_register RA; pp_reg_address_aux (pp_register SP) (Some "0") None None ]);
+        Instr ("c.addi", [ pp_register SP; "4" ]);
+        Instr ("c.jr", [ pp_register RA ]);
+      ]
+    else
+      [
+        Instr ("lw", [ pp_register RA; pp_reg_address_aux (pp_register SP) None None None ]);
+        Instr ("addi", [ pp_register SP; pp_register SP; "4" ]);
+        Instr ("ret", []);
+      ]
 
+
+  let is_rvc_reg = function
+    | X8 | X9 | X10 | X11 | X12 | X13 | X14 | X15 -> true
+    | _ -> false
+
+  let pp_compressed_branch ct =
+    match ct.cond_kind, ct.cond_fst, ct.cond_snd with
+    | EQ, Some r, None
+    | EQ, None, Some r ->
+        if is_rvc_reg r then Some ("c.beqz", pp_register r)
+        else None
+    | NE, Some r, None
+    | NE, None, Some r ->
+        if is_rvc_reg r then Some ("c.bnez", pp_register r)
+        else None
+    | _ -> None
 
   let pp_instr_r fn instr =
     match instr with
@@ -131,23 +161,40 @@ module RiscVTarget: AsmTarget
         [ Instr ("adr", [ pp_register dst; string_of_label fn lbl ]) ]
 
     | JMP lbl ->
-        [ Instr ("j", [ pp_remote_label lbl ]) ]
+      [ Instr ((if Config.use_c then "c.j" else "j"), [ pp_remote_label lbl ]) ]
 
     | JMPI arg ->
         begin match arg with
-        | Reg RA -> [Instr ("ret", [])]
-        | Reg r -> [ Instr ("jr", [ pp_register r ]) ]
-        | _ -> failwith "TODO_RISCV: pp_instr jmpi"
+        | Reg r ->
+            let name, args =
+              if Config.use_c then
+                "c.jr", [ pp_register r ]
+              else if r = RA then
+                "ret", []
+              else
+                "jr", [ pp_register r ]
+            in
+            [ Instr (name, args) ]
+        | _ ->
+            failwith "TODO_RISCV: pp_instr jmpi"
         end
 
     | Jcc (lbl, ct) ->
-        let iname = pp_condition_kind ct.cond_kind in
-        let cond_fst = pp_cond_arg ct.cond_fst in
-        let cond_snd = pp_cond_arg ct.cond_snd in
-        [ Instr (iname, [ cond_fst; cond_snd; string_of_label fn lbl ]) ]
+        let target = string_of_label fn lbl in
+        begin
+          match if Config.use_c then pp_compressed_branch ct else None with
+          | Some (iname, reg) ->
+              [ Instr (iname, [ reg; target ]) ]
+
+          | None ->
+              let iname = pp_condition_kind ct.cond_kind in
+              let cond_fst = pp_cond_arg ct.cond_fst in
+              let cond_snd = pp_cond_arg ct.cond_snd in
+              [ Instr (iname, [ cond_fst; cond_snd; target ]) ]
+        end
 
     | JAL (RA, lbl) ->
-        [Instr ("call", [pp_remote_label lbl])]
+        [ Instr ((if Config.use_c then "c.jal" else "call"), [ pp_remote_label lbl ]) ]
 
     | JAL _
     | CALL _
@@ -172,6 +219,16 @@ module RiscVTarget: AsmTarget
 
 end
 
-module RiscVPrinter = AsmTargetBuilder.Make(RiscVTarget)
+let print_prog lowering_options fmt prog =
+  let use_c =
+    match lowering_options with
+    | Lowering.LO_RISCV opts -> opts.Lowering.rv_lo_use_c
+    | Lowering.LO_NONE -> false
+  in
+  let module Config = struct
+    let use_c = use_c
+  end in
+  let module Target = RiscVTarget(Config) in
+  let module Printer = AsmTargetBuilder.Make(Target) in
 
-let print_prog fmt prog = PrintASM.pp_asm fmt (RiscVPrinter.asm_of_prog prog)
+  PrintASM.pp_asm fmt (Printer.asm_of_prog prog)

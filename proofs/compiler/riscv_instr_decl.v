@@ -1,4 +1,4 @@
-(* RISC-V 32I instruction set *)
+(* RISC-V 32I B C instruction set *)
 
 From elpi.apps Require Import derive.std.
 From mathcomp Require Import ssreflect ssrfun ssrbool seq eqtype ssralg.

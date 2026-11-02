@@ -31,7 +31,7 @@ module type Core_arch = sig
 
   val not_saved_stack : var list
 
-  val pp_asm : Format.formatter -> (reg, regx, xreg, rflag, cond, asm_op) Arch_decl.asm_prog -> unit
+  val pp_asm : Lowering.lowering_options -> Format.formatter -> (reg, regx, xreg, rflag, cond, asm_op) Arch_decl.asm_prog -> unit
 
   val callstyle : reg callstyle
 

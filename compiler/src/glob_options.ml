@@ -35,6 +35,16 @@ let set_lowering_options s =
 let has_lopt opt =
   List.mem opt !lowering_options
 
+let get_lowering_options target_arch =
+  match target_arch with
+  | RISCV ->
+      Lowering.LO_RISCV
+        {
+          Lowering.rv_lo_use_b = has_lopt "b";
+          Lowering.rv_lo_use_c = has_lopt "c";
+        }
+  | _ -> Lowering.LO_NONE
+
 let verbosity = ref 1
 
 let linting_level = ref 1

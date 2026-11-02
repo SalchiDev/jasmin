@@ -53,7 +53,7 @@ module Arm (Lowering_params : Arm_input) : Arch_full.Core_arch
 
   let not_saved_stack = (Arm_params.arm_liparams atoI).lip_not_saved_stack
 
-  let pp_asm = Pp_arm_m4.print_prog
+  let pp_asm _lowering_options = Pp_arm_m4.print_prog
 
   let callstyle = Arch_full.ByReg { call = Some LR; return = false }
 
