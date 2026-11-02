@@ -17,8 +17,9 @@ Require Import
   riscv_extra.
 
 Section Section.
-Context {atoI : arch_toIdent}
-(options : lowering_options).
+Context 
+  {atoI : arch_toIdent}
+  (options : lowering_options).
 
 (* TODO : Review *)
 Definition chk_ws_reg (ws : wsize) : option unit :=
@@ -41,6 +42,119 @@ Definition use_B : bool :=
   | LO_RISCV opts => opts.(rv_lo_use_b)
   | LO_NONE => false
   end.
+
+Definition use_C : bool :=
+  match options with
+  | LO_RISCV opts => opts.(rv_lo_use_c)
+  | LO_NONE => false
+  end.
+
+Definition is_B_instruction (op : riscv_op) : bool :=
+  match op with
+  (* Zba *)
+  | SH1ADD | SH2ADD | SH3ADD => true
+  (* Zbb *)
+  | ANDN | ORN | XNOR
+  | CLZ | CTZ | CPOP
+  | MAX | MAXU | MIN | MINU
+  | SEXT_B | SEXT_H | ZEXT_H
+  | ROL | ROR | RORI
+  | ORC_B | REV8 => true
+  (* Zbs *)
+  | BCLR | BCLRI | BEXT | BEXTI
+  | BINV | BINVI | BSET | BSETI => true
+
+  | _ => false
+  end.
+
+Definition is_C_instruction (op : riscv_op) : bool :=
+  match op with
+  | C_ADD
+  | C_LW | C_SW | C_LWSP | C_SWSP
+  | C_LI | C_LUI | C_ADDI
+  | C_ADDI4SPN | C_ADDI16SP
+  | C_SLLI | C_SRLI | C_SRAI
+  | C_ANDI | C_MV | C_AND
+  | C_OR | C_XOR | C_SUB | C_NOP => true
+
+  | _ => false
+  end.
+
+Definition check_explicit_instruction (ii : instr_info) (op : sopn) : cexec unit :=
+  match op with
+  | Oasm (BaseOp (None, rop)) =>
+      let desc := riscv_instr_desc rop in
+      let name := (desc.(id_pp_asm) [::]).(pp_aop_name) in
+      if is_B_instruction rop then
+        if use_B then ok tt
+        else Error (E.error ii
+          ("RISC-V instruction '" ++ name ++ "' requires extension B"))
+      else if is_C_instruction rop then
+        if use_C then ok tt
+        else Error (E.error ii
+          ("RISC-V instruction '" ++ name ++ "' requires extension C"))
+      else
+        ok tt
+  | _ => ok tt
+  end.
+
+Fixpoint check_instruction_extensions (i : instr) : cexec unit :=
+  let '(MkI ii ir) := i in
+  match ir with
+  | Copn _ _ op _ =>
+      check_explicit_instruction ii op
+  | Cif _ c1 c2 =>
+      Let _ :=
+        List.fold_left
+          (fun acc i =>
+            Let _ := acc in
+            check_instruction_extensions i)
+          c1 (ok tt)
+      in
+      List.fold_left
+        (fun acc i =>
+          Let _ := acc in
+          check_instruction_extensions i)
+        c2 (ok tt)
+  | Cfor _ _ c =>
+      List.fold_left
+        (fun acc i =>
+          Let _ := acc in
+          check_instruction_extensions i)
+        c (ok tt)
+  | Cwhile _ c0 _ _ c1 =>
+      Let _ :=
+        List.fold_left
+          (fun acc i =>
+            Let _ := acc in
+            check_instruction_extensions i)
+          c0 (ok tt)
+      in
+      List.fold_left
+        (fun acc i =>
+          Let _ := acc in
+          check_instruction_extensions i)
+        c1 (ok tt)
+  | _ => ok tt
+  end.
+
+Definition check_riscv_program_extensions (pT : progT) (p : @prog _ _ pT) : cexec unit :=
+  let fix check_functions fs :=
+    match fs with
+    | [::] => ok tt
+    | (_, fd) :: fs =>
+        Let _ :=
+          List.fold_left
+            (fun acc i =>
+              Let _ := acc in
+              check_instruction_extensions i)
+            (f_body fd)
+            (ok tt)
+        in
+        check_functions fs
+    end
+  in
+  check_functions (p_funcs p).
 
 Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
@@ -347,7 +461,6 @@ Fixpoint lower_i (i : instr) : cmd :=
       (* Reintroduce information instruction *)
       map (MkI ii) irs
 
- (* MILANESA checkear intrinseco de extension, pero no puede fallar *)
  (* Copn : "assembly" instruction pattern matching, required for pseudo instructions or extra instructions *)
   | Copn lvs tag op es =>
       let seq_ir :=

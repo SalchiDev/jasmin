@@ -140,6 +140,7 @@ Definition x86_loparams : lowering_params :=
   {|
     lop_lower_i := fun warning _options fv i =>
       lower_i warning fv i;
+    lop_check_extensions := fun _ _ _ => ok tt;
     lop_fvars_correct := fvars_correct;
   |}.
 

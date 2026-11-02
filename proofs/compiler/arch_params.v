@@ -24,6 +24,11 @@ Record lowering_params
       -> instr              (* Source instruction. *)
       -> cmd;
 
+    (* Check that the source program uses only enabled extensions. *)
+    lop_check_extensions :
+      lowering.lowering_options 
+      -> forall (pT : progT), @prog asm_op asmop pT -> cexec unit;
+      
     (* Whether all fresh vars are different from each other and
      from those in a list of function declarations. *)
     lop_fvars_correct :

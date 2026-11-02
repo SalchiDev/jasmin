@@ -155,6 +155,7 @@ End LINEARIZATION.
 Definition riscv_loparams : lowering_params :=
   {|
     lop_lower_i _ options _ := lower_i options;
+    lop_check_extensions := check_riscv_program_extensions;
     lop_fvars_correct := fun _ _ _ => true; (* No fresh variable introduced *)
   |}.
 
