@@ -137,6 +137,20 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
     | X8 | X9 | X10 | X11 | X12 | X13 | X14 | X15 -> true
     | _ -> false
 
+    let pp_compressed_andi pp_args =
+    match pp_args with
+    | [(_, Reg rd); (_, Reg rs1); (_, Imm (ws, w))] ->
+        let imm = Conv.z_of_word ws w in
+        if rd = rs1
+           && is_rvc_reg rd
+           && Z.geq imm (Z.of_int (-32))
+           && Z.leq imm (Z.of_int 31)
+        then
+          Some [ pp_register rd; pp_imm imm ]
+        else
+          None
+    | _ -> None
+
   let pp_compressed_branch ct =
     match ct.cond_kind, ct.cond_fst, ct.cond_snd with
     | EQ, Some r, None
@@ -153,16 +167,12 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
     match instr with
     | ALIGN ->
         failwith "TODO_RISCV: pp_instr align"
-
     | LABEL (_, lbl) ->
         [ Label (string_of_label fn lbl) ]
-
     | STORELABEL (dst, lbl) ->
         [ Instr ("adr", [ pp_register dst; string_of_label fn lbl ]) ]
-
     | JMP lbl ->
       [ Instr ((if Config.use_c then "c.j" else "j"), [ pp_remote_label lbl ]) ]
-
     | JMPI arg ->
         begin match arg with
         | Reg r ->
@@ -178,7 +188,6 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
         | _ ->
             failwith "TODO_RISCV: pp_instr jmpi"
         end
-
     | Jcc (lbl, ct) ->
         let target = string_of_label fn lbl in
         begin
@@ -192,30 +201,36 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
               let cond_snd = pp_cond_arg ct.cond_snd in
               [ Instr (iname, [ cond_fst; cond_snd; target ]) ]
         end
-
     | JAL (RA, lbl) ->
         [ Instr ((if Config.use_c then "c.jal" else "call"), [ pp_remote_label lbl ]) ]
-
     | JAL _
     | CALL _
     | POPPC ->
         assert false
-
     | SysCall op ->
         [Instr ("call", [ Asm_utils.pp_syscall op ])]
-
     | Declassify_val (lty, a) ->
         declassify_val (fun _lty a -> Option.default "" (pp_asm_arg a)) lty a
-
     | Declassify_mem (len, a) ->
         declassify_mem arch len a
-
     | AsmOp (op, args) ->
         let id = instr_desc riscv_decl riscv_op_decl (None, op) in
         let pp = id.id_pp_asm args in
         let name = pp_name_ext pp in
-        let args = List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args in
-        [ Instr (name, args) ]
+        let compressed =
+          if Config.use_c && name = "andi" then
+            pp_compressed_andi pp.pp_aop_args
+          else
+            None
+        in
+        match compressed with
+        | Some args ->
+            [ Instr ("c.andi", args) ]
+        | None ->
+            let args =
+              List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args
+            in
+            [ Instr (name, args) ]
 
 end
 

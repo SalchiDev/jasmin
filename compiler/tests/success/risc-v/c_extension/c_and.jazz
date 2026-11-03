@@ -1,0 +1,21 @@
+export
+fn c_and(reg u32 arg0, reg u32 arg1) -> reg u32 {
+    reg u32 x;
+
+    // Registers.
+    //x = arg0 & arg1;
+    //[x] = x;
+
+    // Immediates.
+    arg0 = arg0 & -32;
+    arg0 = arg0 & -1;
+    arg0 = arg0 & 0;
+    arg0 = arg0 & 1;
+    arg0 = arg0 & 31;
+    x = arg0;
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}
