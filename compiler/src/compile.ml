@@ -446,7 +446,7 @@ let compile (type reg regx xreg rflag cond asm_op extra_op)
           p);
       Compiler.refresh_instr_info;
       Compiler.warning;
-      Compiler.lowering_opts = Glob_options.get_lowering_options !target_arch;
+      Compiler.arch_exts = Glob_options.get_arch_extensions !target_arch;
       Compiler.fresh_var_ident = Conv.fresh_var_ident;
       Compiler.spill_to_mmx;
       Compiler.slh_info;

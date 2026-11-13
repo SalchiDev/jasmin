@@ -105,7 +105,6 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
 
   let function_directives = []
 
-(* MILANESA, No deberia ser +-16 en lugar de 4 para mantener el stack alineado? *)
   let function_header =
     if Config.use_c then
       [
@@ -137,20 +136,6 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
     | X8 | X9 | X10 | X11 | X12 | X13 | X14 | X15 -> true
     | _ -> false
 
-    let pp_compressed_andi pp_args =
-    match pp_args with
-    | [(_, Reg rd); (_, Reg rs1); (_, Imm (ws, w))] ->
-        let imm = Conv.z_of_word ws w in
-        if rd = rs1
-           && is_rvc_reg rd
-           && Z.geq imm (Z.of_int (-32))
-           && Z.leq imm (Z.of_int 31)
-        then
-          Some [ pp_register rd; pp_imm imm ]
-        else
-          None
-    | _ -> None
-
   let pp_compressed_branch ct =
     match ct.cond_kind, ct.cond_fst, ct.cond_snd with
     | EQ, Some r, None
@@ -163,6 +148,11 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
         else None
     | _ -> None
 
+  (* TODO: Jump offsets are not checked against the range supported by
+   compressed instructions. Since instruction compression changes code
+   layout, the final offsets cannot be reliably determined at this stage.
+   Range checking is therefore left to the assembler, which may report an
+   error if a compressed jump target is out of range. *)
   let pp_instr_r fn instr =
     match instr with
     | ALIGN ->
@@ -217,28 +207,16 @@ module RiscVTarget (Config : sig val use_c : bool end) : AsmTarget
         let id = instr_desc riscv_decl riscv_op_decl (None, op) in
         let pp = id.id_pp_asm args in
         let name = pp_name_ext pp in
-        let compressed =
-          if Config.use_c && name = "andi" then
-            pp_compressed_andi pp.pp_aop_args
-          else
-            None
-        in
-        match compressed with
-        | Some args ->
-            [ Instr ("c.andi", args) ]
-        | None ->
-            let args =
-              List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args
-            in
-            [ Instr (name, args) ]
+        let args = List.filter_map (fun (_, a) -> pp_asm_arg a) pp.pp_aop_args in
+        [ Instr (name, args) ]
 
 end
 
-let print_prog lowering_options fmt prog =
+let print_prog arch_extensions fmt prog =
   let use_c =
-    match lowering_options with
-    | Lowering.LO_RISCV opts -> opts.Lowering.rv_lo_use_c
-    | Lowering.LO_NONE -> false
+    match arch_extensions with
+    | AE_RISCV opts -> opts.rv_use_c
+    | _ -> false
   in
   let module Config = struct
     let use_c = use_c

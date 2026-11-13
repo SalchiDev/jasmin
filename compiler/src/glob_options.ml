@@ -27,23 +27,23 @@ let introduce_export_renaming = ref true
 let print_dependencies = ref false
 let lazy_regalloc = ref false
 
-let lowering_options = ref []
+let arch_extensions = ref []
 
-let set_lowering_options s =
-  lowering_options := String.split_on_char ',' s
+let set_arch_extensions s =
+  arch_extensions := String.split_on_char ',' s
 
-let has_lopt opt =
-  List.mem opt !lowering_options
+let has_ext opt =
+  List.mem opt !arch_extensions
 
-let get_lowering_options target_arch =
+let get_arch_extensions target_arch =
   match target_arch with
   | RISCV ->
-      Lowering.LO_RISCV
+      Arch_decl.AE_RISCV
         {
-          Lowering.rv_lo_use_b = has_lopt "b";
-          Lowering.rv_lo_use_c = has_lopt "c";
+          Arch_decl.rv_use_b = has_ext "b";
+          Arch_decl.rv_use_c = has_ext "c";
         }
-  | _ -> Lowering.LO_NONE
+  | _ -> Arch_decl.AE_NONE
 
 let verbosity = ref 1
 
@@ -258,7 +258,7 @@ let options = [
     "-call-conv", Arg.Symbol (["windows"; "linux"], set_cc), " Select calling convention (default depends on host architecture)";
     "-arch", Arg.Symbol (["x86-64"; "arm-m4"; "riscv"], set_target_arch), " Select target arch (default is x86-64)";
     "-system", Arg.Symbol (["macosx"; "linux"], set_target_system), " Select target system (default is "^ Config.target_system^")";
-    "-lopts", Arg.String set_lowering_options, "[options] Select lowering options (comma-separated, e.g. b,c)";
+    "-ext", Arg.String set_arch_extensions, "[options] Select arch extensions (comma-separated, e.g. m,b,c)";
     "-stack-zero",
       Arg.Symbol (List.map fst stack_zero_strategies, set_stack_zero_strategy),
       " Select stack zeroization strategy for export functions";

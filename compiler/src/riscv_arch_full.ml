@@ -46,7 +46,7 @@ module Riscv (Lowering_params : Riscv_input) : Arch_full.Core_arch
 
   let not_saved_stack = (Riscv_params.riscv_liparams atoI).lip_not_saved_stack
 
-  let pp_asm lowering_options = Pp_riscv.print_prog lowering_options 
+  let pp_asm arch_extensions = Pp_riscv.print_prog arch_extensions 
 
   let callstyle = Arch_full.ByReg { call = Some RA; return = true }
 

@@ -11,6 +11,7 @@ CHECKCATS ?= \
 	x86-64-nolea \
 	arm-m4 \
 	risc-v \
+	risc-v-b \
 	risc-v-c \
 	x86-64-stack-zero-loop \
 	x86-64-stack-zero-unrolled \

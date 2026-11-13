@@ -19,7 +19,7 @@ Require Import
 Section Section.
 Context 
   {atoI : arch_toIdent}
-  (options : lowering_options).
+  (arch_exts : arch_extensions).
 
 (* TODO : Review *)
 Definition chk_ws_reg (ws : wsize) : option unit :=
@@ -38,15 +38,15 @@ Definition check_shift_amount e :=
   end.
 
 Definition use_B : bool :=
-  match options with
-  | LO_RISCV opts => opts.(rv_lo_use_b)
-  | LO_NONE => false
+  match arch_exts with
+  | AE_RISCV opts => opts.(rv_use_b)
+  | AE_NONE => false
   end.
 
 Definition use_C : bool :=
-  match options with
-  | LO_RISCV opts => opts.(rv_lo_use_c)
-  | LO_NONE => false
+  match arch_exts with
+  | AE_RISCV opts => opts.(rv_use_c)
+  | AE_NONE => false
   end.
 
 Definition is_B_instruction (op : riscv_op) : bool :=

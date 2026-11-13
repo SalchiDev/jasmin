@@ -30,15 +30,19 @@ then
     ASARGS="--triple=armv7m --mcpu=cortex-m4"
 elif [ $ARCH = "riscv" ]
 then
-     # +m enables integer multiplication
-     # +zbb enables basic bit manipulation
-     # +zba enables address bit manipulation
-     # +zbs enables single bit manipulation
-    RISCV_EXT="+m,+zbb,+zba,+zbs"
+    # +m enables integer multiplication
+    RISCV_EXT="+m"
+
+    # +zbb enables basic bit manipulation
+    # +zba enables address bit manipulation
+    # +zbs enables single bit manipulation
+    if [[ " $* " == *"-ext b"* ]]; then
+        RISCV_EXT="+zbb,+zba,+zbs"
+    fi
 
     # +c enables compression
-    if [[ " $* " == *"-lopts c"* ]]; then
-        RISCV_EXT="+m,+c"
+    if [[ " $* " == *"-ext c"* ]]; then
+        RISCV_EXT="+c"
     fi
 
     ASARGS="--triple=riscv32 --mcpu=generic-rv32 -mattr=$RISCV_EXT"

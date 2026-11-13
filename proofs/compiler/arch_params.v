@@ -19,14 +19,14 @@ Record lowering_params
     (* Lower an instruction to architecture-specific instructions. *)
     lop_lower_i :
          (instr_info -> warning_msg -> instr_info)
-      -> lowering.lowering_options
+      -> arch_extensions
       -> lowering.fresh_vars
       -> instr              (* Source instruction. *)
       -> cmd;
 
     (* Check that the source program uses only enabled extensions. *)
     lop_check_extensions :
-      lowering.lowering_options 
+      arch_extensions
       -> forall (pT : progT), @prog asm_op asmop pT -> cexec unit;
       
     (* Whether all fresh vars are different from each other and

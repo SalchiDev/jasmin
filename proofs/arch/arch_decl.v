@@ -120,6 +120,17 @@ Proof.
 Qed.
 
 (* -------------------------------------------------------------------- *)
+(* Arch extensions. *)
+Record rv_arch_exts := {
+  rv_use_b : bool;
+  rv_use_c : bool;
+}.
+
+Variant arch_extensions :=
+| AE_NONE
+| AE_RISCV : rv_arch_exts -> arch_extensions.
+
+(* -------------------------------------------------------------------- *)
 (* Addresses.
  * An address consists of
  *   - A displacement (an immediate value).
