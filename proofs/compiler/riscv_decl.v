@@ -148,9 +148,9 @@ Variant riscv_caimm_cond :=
   | CAimmC_riscv_5bits_unsigned_non0
   | CAimmC_riscv_6bits_signed
   | CAimmC_riscv_6bits_signed_non0
-  | CAimmC_riscv_lui
-  | CAimmC_riscv_addi4spn
-  | CAimmC_riscv_addi16sp.
+  | CAimmC_riscv_c_lui
+  | CAimmC_riscv_c_addi4spn
+  | CAimmC_riscv_c_addi16sp.
 
 #[ export ]
 Instance eqTC_riscv_caimm_cond : eqTypeC riscv_caimm_cond :=
@@ -175,18 +175,18 @@ Definition riscv_check_CAimm (checker : riscv_caimm_cond) ws (w : word ws) : boo
     (-32 <=? i)%Z &&
     (i <=? 31)%Z &&
     negb (i =? 0)%Z
-  | CAimmC_riscv_lui =>
+  | CAimmC_riscv_c_lui =>
       let i := wunsigned w in
       ((1 <=? i)%Z && 
       (i <=? 31)%Z) ||
       ((1048544 <=? i)%Z && 
       (i <=? 1048575)%Z)
-  | CAimmC_riscv_addi4spn =>
+  | CAimmC_riscv_c_addi4spn =>
       let i := wunsigned w in
       (4 <=? i)%Z &&
       (i <=? 1020)%Z &&
       (i mod 4 =? 0)%Z
-  | CAimmC_riscv_addi16sp =>
+  | CAimmC_riscv_c_addi16sp =>
       let i := wsigned w in
       (-512 <=? i)%Z &&
       (i <=? 496)%Z &&
@@ -201,9 +201,39 @@ Definition riscv_caimm_cond_pp (checker : riscv_caimm_cond) : string :=
   | CAimmC_riscv_5bits_unsigned_non0 => "[1, 31]"
   | CAimmC_riscv_6bits_signed => "[-32, 31]"
   | CAimmC_riscv_6bits_signed_non0 => "[-32, 31], nonzero"
-  | CAimmC_riscv_lui => "[0xfffe0, 0xfffff] or [1, 31]"
-  | CAimmC_riscv_addi4spn => "[4, 1020], multiple of 4"
-  | CAimmC_riscv_addi16sp => "[-512, 496], nonzero multiple of 16"
+  | CAimmC_riscv_c_lui => "[0xfffe0, 0xfffff] or [1, 31]"
+  | CAimmC_riscv_c_addi4spn => "[4, 1020], multiple of 4"
+  | CAimmC_riscv_c_addi16sp => "[-512, 496], nonzero multiple of 16"
+  end%string.
+
+(* Memory displacement conditions for RISC-V. *)
+#[only(eqbOK)] derive
+Variant riscv_camem_cond :=
+  | CAmemC_riscv_c_lw
+  | CAmemC_riscv_c_lwsp.
+
+#[export]
+Instance eqTC_riscv_camem_cond : eqTypeC riscv_camem_cond :=
+  { ceqP := riscv_camem_cond_eqb_OK }.
+
+Definition riscv_check_CAmem (checker : riscv_camem_cond) (w : word riscv_reg_size) : bool :=
+  match checker with
+  | CAmemC_riscv_c_lw =>
+      let i := wunsigned w in
+      (0 <=? i)%Z &&
+      (i <=? 124)%Z &&
+      (i mod 4 =? 0)%Z
+  | CAmemC_riscv_c_lwsp =>
+      let i := wunsigned w in
+      (0 <=? i)%Z &&
+      (i <=? 252)%Z &&
+      (i mod 4 =? 0)%Z
+  end.
+
+Definition riscv_camem_cond_pp (checker : riscv_camem_cond) : string :=
+  match checker with
+  | CAmemC_riscv_c_lw => "[0, 124], multiple of 4"
+  | CAmemC_riscv_c_lwsp => "[0, 252], multiple of 4"
   end%string.
 
 #[ export ]
@@ -222,6 +252,10 @@ Instance riscv_decl : arch_decl register register_ext xregister rflag condt :=
   ; caimm_cond_eqC := eqTC_riscv_caimm_cond
   ; caimm_cond_pp := riscv_caimm_cond_pp
   ; check_CAimm := riscv_check_CAimm
+  ; camem_cond := riscv_camem_cond
+  ; camem_cond_eqC := eqTC_riscv_camem_cond
+  ; camem_cond_pp := riscv_camem_cond_pp
+  ; check_CAmem := riscv_check_CAmem
   }.
 
 Definition riscv_linux_call_conv : calling_convention :=

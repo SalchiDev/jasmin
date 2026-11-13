@@ -278,7 +278,6 @@ Definition x86_agparams : asm_gen_params :=
   {|
     agp_assemble_cond := assemble_cond;
     agp_is_valid_address := is_valid_address;
-    agp_check_asm_args := fun _ _ => ok tt;
   |}.
 
 (* ------------------------------------------------------------------------ *)

@@ -154,8 +154,6 @@ Record asm_gen_params :=
       (* Assemble an expression into an architecture-specific condition. *)
     agp_is_valid_address : reg_address -> bool;
       (* Checks whether the addressing mode is supported on the given arch. *)
-    agp_check_asm_args : instr_desc_t -> asm_args -> cexec unit;
-      (* Architecture-specific validation of assembled instruction arguments. *)
   }.
 
 Context
@@ -406,7 +404,7 @@ Definition check_arg_kind_no_imm (a:asm_arg) (cond: arg_kind) :=
   | Imm _ _, CAimm _ _ => true
   | Reg _ , CAreg => true
   | Regx _, CAregx => true
-  | Addr _, CAmem _ => true
+  | Addr _, CAmem _ _ => true
   | XReg _, CAxmm   => true
   | _, _ => false
   end.
@@ -432,7 +430,7 @@ Definition filter_args_kinds_no_imm (args:asm_args) (cond:args_kinds) : option a
 Definition filter_i_args_kinds_no_imm (cond:i_args_kinds) (a:asm_args) : i_args_kinds :=
   pmap (filter_args_kinds_no_imm a) cond.
 
-(* Enforce size constraints on immediates. *)
+(* Enforce size constraints on immediates and address displacements. *)
 Definition enforce_imm_arg_kind (a:asm_arg) (cond: arg_kind) : option asm_arg :=
   match a, cond with
   | Condt _, CAcond => Some a
@@ -444,7 +442,10 @@ Definition enforce_imm_arg_kind (a:asm_arg) (cond: arg_kind) : option asm_arg :=
     then Some (Imm w1) else None
   | Reg _, CAreg => Some a
   | Regx _, CAregx => Some a
-  | Addr _, CAmem _ => Some a
+  | Addr (Areg ra), CAmem _ checker =>
+      if oapp (fun c => check_CAmem c ra.(ad_disp)) true checker
+      then Some a else None
+  | Addr (Arip _), CAmem _ _ => Some a
   | XReg _, CAxmm   => Some a
   | _, _ => None
   end.
@@ -465,7 +466,10 @@ Definition enforce_imm_i_args_kinds (cond:i_args_kinds) (a:asm_args) :=
 
 Definition pp_arg_kind c :=
   match c with
-  | CAmem b => pp_nobox [:: pp_s "mem (glob "; pp_s (if b then "" else "not ")%string; pp_s "allowed)"]
+  | CAmem b checker =>
+    pp_nobox
+      ([:: pp_s "mem (glob "; pp_s (if b then "" else "not ")%string; pp_s "allowed)"]
+       ++ oapp (fun c => [:: pp_s " "; pp_s (camem_cond_pp c)]) [::] checker)
   | CAimm checker ws =>
       pp_nobox
         ([:: pp_s "imm "; pp_s (string_of_wsize ws)]
@@ -501,9 +505,9 @@ Definition assemble_asm_op rip ii op (outx : lexprs) (inx : rexprs) :=
       ok asm_args
     else
       Error (E.error ii (pp_nobox [::
-        pp_box [:: pp_s "instruction"; pp_s s; pp_s "is given at least one too large immediate as an argument."]; PPEbreak;
+        pp_box [:: pp_s "instruction"; pp_s s; pp_s "is given at least one argument that does not satisfy its constraints."]; PPEbreak;
         pp_vbox [::
-        pp_s "Allowed args compatible with the input (except on immediate sizes) are:";
+        pp_s "Allowed args compatible with the input (except on immediate and memory constraints) are:";
         pp_nobox [::pp_s "  "; pp_vbox [::
         pp_i_args_kinds args_kinds]];
         pp_s "All allowed args (regardless of the input) are:";
@@ -513,7 +517,6 @@ Definition assemble_asm_op rip ii op (outx : lexprs) (inx : rexprs) :=
   Let _ := assert (check_sopn_args rip ii asm_args inx (zip id.(id_in) id.(id_tin)) &&
                      check_sopn_dests rip ii asm_args outx (zip id.(id_out) id.(id_tout)))
                   (E.internal_error ii "assemble_asm_opn: cannot check") in
-  Let _ := agp_check_asm_args agparams id asm_args in
   ok (op.2, asm_args).
 
 Definition assemble_asm_args rip ii args :=

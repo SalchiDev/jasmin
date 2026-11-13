@@ -179,6 +179,13 @@ Definition arm_caimm_cond_pp (checker : arm_caimm_cond) : string :=
   | CAimmC_arm_0_8_16_24 => "[0; 8; 16; 24]"
   end%string.
 
+(* ARM does not yet impose any restrictions on memory address displacements. *)
+Definition arm_check_CAmem (checker : empty) (_ : word arm_reg_size) : bool :=
+  match checker with end.
+
+Definition arm_camem_cond_pp (checker : empty) : string :=
+  match checker with end.
+
 #[ export ]
 Instance arm_decl : arch_decl register register_ext xregister rflag condt :=
   { reg_size  := arm_reg_size
@@ -195,6 +202,10 @@ Instance arm_decl : arch_decl register register_ext xregister rflag condt :=
   ; caimm_cond_eqC := eqTC_arm_caimm_cond
   ; caimm_cond_pp := arm_caimm_cond_pp
   ; check_CAimm := arm_check_CAimm
+  ; camem_cond := empty
+  ; camem_cond_eqC := eqTC_empty
+  ; camem_cond_pp := arm_camem_cond_pp
+  ; check_CAmem := arm_check_CAmem
   }.
 
 Definition arm_linux_call_conv : calling_convention :=

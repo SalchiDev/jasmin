@@ -3,8 +3,8 @@ fn c_and(reg u32 arg0, reg u32 arg1) -> reg u32 {
     reg u32 x;
 
     // Registers.
-    //x = arg0 & arg1;
-    //[x] = x;
+    x = arg0 & arg1;
+    [x] = x;
 
     // Immediates.
     arg0 = arg0 & -32;
