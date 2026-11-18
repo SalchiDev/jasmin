@@ -269,24 +269,80 @@ Definition lower_shadd (e0 e1 : pexpr) : option (riscv_extended_op * pexprs) :=
   | _, _ => None
   end.
 
+Definition same_lval_as_pvar (lv : lval) (e : pexpr) : bool :=
+  match lv, e with
+  | Lvar (VarI r_var _), Pvar v =>
+    (Ident.id_name (vname r_var) == Ident.id_name (vname (v.(gv):>var)))
+  | _, _ => false
+  end.
+
+Variant c_imm_kind :=
+| CI_5b_u_n0
+| CI_6b_s
+| CI_6b_s_n0
+| CI_lui.
+
+Definition check_C_imm (kind : c_imm_kind) (e : pexpr) : bool :=
+  match is_wconst U32 e with
+  | Some n =>
+      match kind with
+      | CI_5b_u_n0 =>
+          let i := wunsigned n in
+          (1 <=? i)%Z && (i <=? 31)%Z
+      | CI_6b_s =>
+          let i := wsigned n in
+          (-32 <=? i)%Z && (i <=? 31)%Z
+      | CI_6b_s_n0 =>
+          let i := wsigned n in
+          (-32 <=? i)%Z &&
+          (i <=? 31)%Z &&
+          negb (i =? 0)%Z
+      | CI_lui =>
+          let i := wunsigned n in
+          ((1 <=? i)%Z && 
+          (i <=? 31)%Z) ||
+          ((1048544 <=? i)%Z && 
+          (i <=? 1048575)%Z)
+      end
+  | None => false
+  end.
+
 Definition lower_Papp2
-  (ws : wsize) (op : sop2) (e0 e1 : pexpr) :
+  (lv : lval) (ws : wsize) (op : sop2) (e0 e1 : pexpr) :
   option (riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
   match op with
   | Oadd (Op_w _) =>
-    if use_B then
+    let default := decide_op_reg_imm U32 e0 e1 (BaseOp(None, ADD)) (BaseOp(None, ADDI)) in
+    if use_C && same_lval_as_pvar lv e0 then
+      match is_wconst U32 e1 with
+      | Some _ =>
+          if check_C_imm CI_6b_s_n0 e1 then
+            Some (BaseOp(None, C_ADDI), [:: e0; e1])
+          else default
+      | None =>
+          Some (BaseOp(None, C_ADD), [:: e0; e1])
+      end
+    else if use_B then
       match lower_shadd e0 e1 with
       | Some op => Some op
-      | None =>
-          decide_op_reg_imm U32 e0 e1
-            (BaseOp(None, ADD))
-            (BaseOp(None, ADDI))
+      | None => default
       end
-    else
-      decide_op_reg_imm U32 e0 e1 (BaseOp(None, ADD)) (BaseOp(None, ADDI))
+    else default
   | Omul (Op_w _) => Some (BaseOp (None, MUL), [:: e0; e1])
-  | Osub (Op_w _) => decide_op_reg_imm_neg U32 e0 e1 (BaseOp(None, SUB)) (BaseOp(None, ADDI))
+  | Osub (Op_w _) => 
+    let default := decide_op_reg_imm_neg U32 e0 e1 (BaseOp(None, SUB)) (BaseOp(None, ADDI)) in
+    if use_C && same_lval_as_pvar lv e0 then
+      match is_wconst U32 e1 with
+      | Some _ =>
+          let%opt e1:= insert_minus e1 in
+          if check_C_imm CI_6b_s_n0 e1 then
+            Some (BaseOp(None, C_ADDI), [:: e0; e1])
+          else default
+      | None =>
+          Some (BaseOp(None, C_SUB), [:: e0; e1])
+      end
+    else default
   | Odiv sg (Op_w U32) =>
     let o := if sg is Signed then DIV else DIVU in
     Some (BaseOp (None, o), [:: e0; e1])
@@ -294,34 +350,53 @@ Definition lower_Papp2
     let o := if sg is Signed then REM else REMU in
     Some (BaseOp (None, o), [:: e0; e1])
   | Oland _ =>
-    if use_B then
+    let default := decide_op_reg_imm U32 e0 e1 (BaseOp(None, AND)) (BaseOp(None, ANDI)) in
+    if use_C && same_lval_as_pvar lv e0 then
+      match is_wconst U32 e1 with
+      | Some _ =>
+          if check_C_imm CI_6b_s e1 then
+            Some (BaseOp(None, C_ANDI), [:: e0; e1])
+          else default
+      | None =>
+          Some (BaseOp(None, C_AND), [:: e0; e1])
+      end
+    else if use_B then
       match e0, e1 with
       | e0, Papp1 (Olnot U32) e1 =>
           Some (BaseOp (None, ANDN), [:: e0; e1])
       | Papp1 (Olnot U32) e0, e1 =>
           Some (BaseOp (None, ANDN), [:: e1; e0])
-      | _, _ =>
-          decide_op_reg_imm U32 e0 e1
-            (BaseOp(None, AND))
-            (BaseOp(None, ANDI))
+      | _, _ => default
       end
-    else
-      decide_op_reg_imm U32 e0 e1 (BaseOp(None, AND)) (BaseOp(None, ANDI))
+    else default
   | Olor _ =>
-    if use_B then
+    let default := decide_op_reg_imm U32 e0 e1 (BaseOp(None, OR)) (BaseOp(None, ORI)) in
+    if use_C && same_lval_as_pvar lv e0 then
+      match is_wconst U32 e1 with
+      | Some _ => 
+          default
+      | None =>
+          Some (BaseOp(None, C_OR), [:: e0; e1])
+      end
+    else if use_B then
       match e0, e1 with
       | e0, Papp1 (Olnot U32) e1 =>
           Some (BaseOp (None, ORN), [:: e0; e1])
       | Papp1 (Olnot U32) e0, e1 =>
           Some (BaseOp (None, ORN), [:: e1; e0])
-      | _, _ =>
-          decide_op_reg_imm U32 e0 e1
-            (BaseOp(None, OR))
-            (BaseOp(None, ORI))
+      | _, _ => default
       end
-    else
-      decide_op_reg_imm U32 e0 e1 (BaseOp(None, OR)) (BaseOp(None, ORI))
-  | Olxor _ => decide_op_reg_imm U32 e0 e1 (BaseOp(None, XOR)) (BaseOp(None, XORI))
+    else default
+  | Olxor _ => 
+    let default := decide_op_reg_imm U32 e0 e1 (BaseOp(None, XOR)) (BaseOp(None, XORI)) in
+    if use_C && same_lval_as_pvar lv e0 then
+      match is_wconst U32 e1 with
+      | Some _ => 
+          default
+      | None =>
+          Some (BaseOp(None, C_XOR), [:: e0; e1])
+      end
+    else default
   | Olsr U32 =>
     if check_shift_amount e1 is Some(e1) then
       let op := if is_wconst U8 e1 then SRLI else SRL in
@@ -396,7 +471,7 @@ Definition lower_cassgn
     | Pget _ _ _ _ _
     | Pload _ _ _ => lower_load ws e
     | Papp1 op e => lower_Papp1 ws op e
-    | Papp2 op a b => lower_Papp2 ws op a b
+    | Papp2 op a b => lower_Papp2 lv ws op a b
     | _ => None
     end
     in Some ([:: lv], Oasm op, e).
@@ -415,7 +490,7 @@ Definition lower_swap ty lvs es : option (seq copn_args) :=
 Definition lower_mulu (lvs : seq lval) (es : seq pexpr) : option (seq copn_args):=  
   match lvs, es with
   | [:: Lvar r1; Lvar r2 ], [:: Pvar x ; Pvar y ] =>
-    if (r1 == x.(gv):>var) || (r1 == y.(gv):>var) then
+    if (r1 == x.(gv):>var) || (r1 == y.(gv):>var) then (* MILANESA, Siempre falso ? *)
     None
     else
     (* Arbitrary choice : r1 computed before r2*)  

@@ -1,4 +1,4 @@
-(* RISC-V 32I B C instruction set *)
+(* RISC-V 32I M B C instruction set *)
 
 From elpi.apps Require Import derive.std.
 From mathcomp Require Import ssreflect ssrfun ssrbool seq eqtype ssralg.
@@ -400,7 +400,6 @@ Definition riscv_C_SUB_instr : instr_desc_t :=
     id_doit := DOIT;
     id_msb_flag := MSB_MERGE;
     id_tin := tin;
-    (* c.sub rd', rs2': rd' is both source and destination. *)
     id_in := [:: Ervc 0; Ervc 1 ];
     id_tout := [:: lreg ];
     id_out := [:: Ervc 0 ];
