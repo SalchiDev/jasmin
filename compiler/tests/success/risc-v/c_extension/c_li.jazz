@@ -10,6 +10,15 @@ fn c_li() -> reg u32 {
     x = 31;
     [x] = x;
 
+    x = 4096;
+    [x] = x;
+    x = 126976;
+    [x] = x;
+    x = 4294963200;
+    [x] = x;
+    x = 4294836224;
+    [x] = x;
+
     reg u32 res;
     res = x;
     return res;

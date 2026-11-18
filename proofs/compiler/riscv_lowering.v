@@ -160,7 +160,8 @@ Variant c_imm_kind :=
 | CI_5b_u_n0
 | CI_6b_s
 | CI_6b_s_n0
-| CI_lui.
+| CI_lui
+| CI_lw_sw.
 
 Definition check_C_imm (sz : wsize) (kind : c_imm_kind) (e : pexpr) : bool :=
   match is_wconst sz e with
@@ -183,18 +184,46 @@ Definition check_C_imm (sz : wsize) (kind : c_imm_kind) (e : pexpr) : bool :=
           (i <=? 31)%Z) ||
           ((1048544 <=? i)%Z && 
           (i <=? 1048575)%Z)
+      | CI_lw_sw =>
+          let i := wunsigned n in
+          (0 <=? i)%Z &&
+          (i <=? 124)%Z &&
+          ((i mod 4) =? 0)%Z
       end
   | None => false
   end.
 
+Definition check_C_lui_value (e : pexpr) : option pexpr :=
+  match is_wconst U32 e with
+  | Some n =>
+      let i := wunsigned n in
+      if (i mod 4096)%Z == 0%Z then
+        let upper := (i / 4096)%Z in
+        let e' := Papp1 (Oword_of_int U32) (Pconst upper) in
+        if check_C_imm U32 CI_lui e' then Some e'
+        else None
+      else None
+  | None => None
+  end.
+  
 Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
   match op with
   | Oword_of_int _ =>
-    if is_const e is Some _ then 
-      if use_C && (check_C_imm U32 CI_6b_s (Papp1 (Oword_of_int U32) e)) then
-        Some(BaseOp (None, C_LI), [:: Papp1 (Oword_of_int U32) e])
-      else Some(BaseOp (None, LI), [:: Papp1 (Oword_of_int U32) e])
+    if is_const e is Some _ then
+      let e32 := Papp1 (Oword_of_int U32) e in
+      if use_C then
+        if check_C_imm U32 CI_6b_s e32 then
+          Some (BaseOp (None, C_LI), [:: e32])
+        else
+          match check_C_lui_value e32 with
+          | Some imm =>
+              Some (BaseOp (None, C_LUI), [:: imm])
+          | None =>
+              Some (BaseOp (None, LI), [:: e32])
+          end
+      else
+        Some (BaseOp (None, LI), [:: e32])
     else None
   | Osignext U32 ws' =>
     if use_B then
@@ -471,7 +500,7 @@ Definition lower_Pvar (ws : wsize) (v : gvar) : option(riscv_extended_op * pexpr
     if ws != U32 
         then None 
     else
-        let op := if is_var_in_memory (gv v) then LOAD Signed U32 else MV in
+        let op := if is_var_in_memory (gv v) then LOAD Signed U32 else (if use_C then C_MV else MV) in
         Some (BaseOp (None, op), [:: Pvar v ]).
 
 (* Convert an assignment into an architecture-specific operation. *)

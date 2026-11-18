@@ -209,8 +209,8 @@ Definition riscv_caimm_cond_pp (checker : riscv_caimm_cond) : string :=
 (* Memory displacement conditions for RISC-V. *)
 #[only(eqbOK)] derive
 Variant riscv_camem_cond :=
-  | CAmemC_riscv_c_lw
-  | CAmemC_riscv_c_lwsp.
+  | CAmemC_riscv_c_lw_sw
+  | CAmemC_riscv_c_lwsp_swsp.
 
 #[export]
 Instance eqTC_riscv_camem_cond : eqTypeC riscv_camem_cond :=
@@ -218,12 +218,12 @@ Instance eqTC_riscv_camem_cond : eqTypeC riscv_camem_cond :=
 
 Definition riscv_check_CAmem (checker : riscv_camem_cond) (w : word riscv_reg_size) : bool :=
   match checker with
-  | CAmemC_riscv_c_lw =>
+  | CAmemC_riscv_c_lw_sw =>
       let i := wunsigned w in
       (0 <=? i)%Z &&
       (i <=? 124)%Z &&
       (i mod 4 =? 0)%Z
-  | CAmemC_riscv_c_lwsp =>
+  | CAmemC_riscv_c_lwsp_swsp =>
       let i := wunsigned w in
       (0 <=? i)%Z &&
       (i <=? 252)%Z &&
@@ -232,8 +232,8 @@ Definition riscv_check_CAmem (checker : riscv_camem_cond) (w : word riscv_reg_si
 
 Definition riscv_camem_cond_pp (checker : riscv_camem_cond) : string :=
   match checker with
-  | CAmemC_riscv_c_lw => "[0, 124], multiple of 4"
-  | CAmemC_riscv_c_lwsp => "[0, 252], multiple of 4"
+  | CAmemC_riscv_c_lw_sw => "[0, 124], multiple of 4"
+  | CAmemC_riscv_c_lwsp_swsp => "[0, 252], multiple of 4"
   end%string.
 
 #[ export ]
