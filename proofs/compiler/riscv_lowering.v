@@ -156,12 +156,45 @@ Definition check_riscv_program_extensions (pT : progT) (p : @prog _ _ pT) : cexe
   in
   check_functions (p_funcs p).
 
+Variant c_imm_kind :=
+| CI_5b_u_n0
+| CI_6b_s
+| CI_6b_s_n0
+| CI_lui.
+
+Definition check_C_imm (sz : wsize) (kind : c_imm_kind) (e : pexpr) : bool :=
+  match is_wconst sz e with
+  | Some n =>
+      match kind with
+      | CI_5b_u_n0 =>
+          let i := wunsigned n in
+          (1 <=? i)%Z && (i <=? 31)%Z
+      | CI_6b_s =>
+          let i := wsigned n in
+          (-32 <=? i)%Z && (i <=? 31)%Z
+      | CI_6b_s_n0 =>
+          let i := wsigned n in
+          (-32 <=? i)%Z &&
+          (i <=? 31)%Z &&
+          negb (i =? 0)%Z
+      | CI_lui =>
+          let i := wunsigned n in
+          ((1 <=? i)%Z && 
+          (i <=? 31)%Z) ||
+          ((1048544 <=? i)%Z && 
+          (i <=? 1048575)%Z)
+      end
+  | None => false
+  end.
+
 Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
   match op with
   | Oword_of_int _ =>
-    if is_const e is Some _
-      then  Some(BaseOp (None, LI), [:: Papp1 (Oword_of_int U32) e])
+    if is_const e is Some _ then 
+      if use_C && (check_C_imm U32 CI_6b_s (Papp1 (Oword_of_int U32) e)) then
+        Some(BaseOp (None, C_LI), [:: Papp1 (Oword_of_int U32) e])
+      else Some(BaseOp (None, LI), [:: Papp1 (Oword_of_int U32) e])
     else None
   | Osignext U32 ws' =>
     if use_B then
@@ -276,37 +309,6 @@ Definition same_lval_as_pvar (lv : lval) (e : pexpr) : bool :=
   | _, _ => false
   end.
 
-Variant c_imm_kind :=
-| CI_5b_u_n0
-| CI_6b_s
-| CI_6b_s_n0
-| CI_lui.
-
-Definition check_C_imm (kind : c_imm_kind) (e : pexpr) : bool :=
-  match is_wconst U32 e with
-  | Some n =>
-      match kind with
-      | CI_5b_u_n0 =>
-          let i := wunsigned n in
-          (1 <=? i)%Z && (i <=? 31)%Z
-      | CI_6b_s =>
-          let i := wsigned n in
-          (-32 <=? i)%Z && (i <=? 31)%Z
-      | CI_6b_s_n0 =>
-          let i := wsigned n in
-          (-32 <=? i)%Z &&
-          (i <=? 31)%Z &&
-          negb (i =? 0)%Z
-      | CI_lui =>
-          let i := wunsigned n in
-          ((1 <=? i)%Z && 
-          (i <=? 31)%Z) ||
-          ((1048544 <=? i)%Z && 
-          (i <=? 1048575)%Z)
-      end
-  | None => false
-  end.
-
 Definition lower_Papp2
   (lv : lval) (ws : wsize) (op : sop2) (e0 e1 : pexpr) :
   option (riscv_extended_op * pexprs) :=
@@ -317,7 +319,7 @@ Definition lower_Papp2
     if use_C && same_lval_as_pvar lv e0 then
       match is_wconst U32 e1 with
       | Some _ =>
-          if check_C_imm CI_6b_s_n0 e1 then
+          if check_C_imm U32 CI_6b_s_n0 e1 then
             Some (BaseOp(None, C_ADDI), [:: e0; e1])
           else default
       | None =>
@@ -336,7 +338,7 @@ Definition lower_Papp2
       match is_wconst U32 e1 with
       | Some _ =>
           let%opt e1:= insert_minus e1 in
-          if check_C_imm CI_6b_s_n0 e1 then
+          if check_C_imm U32 CI_6b_s_n0 e1 then
             Some (BaseOp(None, C_ADDI), [:: e0; e1])
           else default
       | None =>
@@ -354,7 +356,7 @@ Definition lower_Papp2
     if use_C && same_lval_as_pvar lv e0 then
       match is_wconst U32 e1 with
       | Some _ =>
-          if check_C_imm CI_6b_s e1 then
+          if check_C_imm U32 CI_6b_s e1 then
             Some (BaseOp(None, C_ANDI), [:: e0; e1])
           else default
       | None =>
@@ -398,20 +400,38 @@ Definition lower_Papp2
       end
     else default
   | Olsr U32 =>
-    if check_shift_amount e1 is Some(e1) then
-      let op := if is_wconst U8 e1 then SRLI else SRL in
-      Some (BaseOp (None, op), [:: e0; e1])
-    else None
+    let default :=
+      if check_shift_amount e1 is Some(e1) then
+        let op := if is_wconst U8 e1 then SRLI else SRL in
+        Some (BaseOp (None, op), [:: e0; e1])
+      else None in
+    if use_C && same_lval_as_pvar lv e0 then
+      if check_C_imm U8 CI_5b_u_n0 e1 then
+        Some (BaseOp (None, C_SRLI), [:: e0; e1])
+      else default
+    else default
   | Olsl (Op_w _) =>
-    if check_shift_amount e1 is Some(e1) then
-      let op := if is_wconst U8 e1 then SLLI else SLL in
-      Some (BaseOp (None, op), [:: e0; e1])
-    else None
+    let default :=
+      if check_shift_amount e1 is Some(e1) then
+        let op := if is_wconst U8 e1 then SLLI else SLL in
+        Some (BaseOp (None, op), [:: e0; e1])
+      else None in
+    if use_C && same_lval_as_pvar lv e0 then
+      if check_C_imm U8 CI_5b_u_n0 e1 then
+        Some (BaseOp (None, C_SLLI), [:: e0; e1])
+      else default
+    else default
   | Oasr (Op_w U32) =>
-    if check_shift_amount e1 is Some(e1) then
-      let op := if is_wconst U8 e1 then SRAI else SRA in
-      Some (BaseOp (None, op), [:: e0; e1])
-    else None
+    let default :=
+      if check_shift_amount e1 is Some(e1) then
+        let op := if is_wconst U8 e1 then SRAI else SRA in
+        Some (BaseOp (None, op), [:: e0; e1])
+      else None in
+    if use_C && same_lval_as_pvar lv e0 then
+      if check_C_imm U8 CI_5b_u_n0 e1 then
+        Some (BaseOp (None, C_SRAI), [:: e0; e1])
+      else default
+    else default
   | Orol U32 =>
     if use_B then
       if check_shift_amount e1 is Some(e1) then

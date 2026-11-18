@@ -1,0 +1,14 @@
+export
+fn c_srai(reg u32 arg0) -> reg u32 {
+    reg u32 x;
+
+    // Immediates.
+    arg0 = arg0 >>s 1;
+    arg0 >>s= 31;
+    x = arg0;
+    [x] = x;
+
+    reg u32 res;
+    res = x;
+    return res;
+}
