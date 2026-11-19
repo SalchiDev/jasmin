@@ -1,10 +1,14 @@
 export
 fn c_lw(reg u32 arg) -> reg u32 {
-    reg u32 a = #C_LW([:u32 arg]);
+    reg u32 x, y
 
-    reg u32 b = #C_LW([:u32 arg + 124]);
+    x = #C_LW([:u32 arg]);
 
-    a ^= b;
+    y = #C_LW([:u32 arg + 124]);
 
-    return a;
+    x ^= y;
+
+    reg u32 res;
+    res = x;
+    return res;
 }

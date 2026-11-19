@@ -1,6 +1,9 @@
 export
 fn c_sw(reg u32 arg, reg u32 value) {
-    [:u32 arg] = #C_SW(value);
+    reg u32 x;
+    x = value;
 
-    [:u32 arg + 124] = #C_SW(value);
+    [:u32 arg] = #C_SW(x);
+
+    [:u32 arg + 124] = #C_SW(x);
 }

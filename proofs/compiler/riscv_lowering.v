@@ -205,6 +205,18 @@ Definition check_C_lui_value (e : pexpr) : option pexpr :=
       else None
   | None => None
   end.
+
+Fixpoint check_C_lw_sw_addr (addr : pexpr) : bool :=
+  match addr with
+  | Pvar _ => true
+  | Pload _ U32 e => check_C_lw_sw_addr e
+  | Papp2 _ _ offset => check_C_imm U32 CI_lw_sw offset
+  | _ => false
+  end.
+
+Definition select_load (sg : signedness) (ws : wsize) (e : pexpr) : riscv_op :=
+  if use_C && (ws <= U32)%CMP && (U32 <= ws)%CMP && check_C_lw_sw_addr e then C_LW
+  else LOAD sg ws.
   
 Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
@@ -229,7 +241,7 @@ Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_exten
     if use_B then
       let%opt _ := oassert (ws' <= U32)%CMP in
       if is_load e then
-        Some (BaseOp(None, LOAD Signed ws'), [:: e])
+        Some (BaseOp(None, select_load Signed ws' e), [:: e])
       else
         match ws' with
         | U8 =>
@@ -242,7 +254,7 @@ Definition lower_Papp1 (ws : wsize) (op : sop1) (e : pexpr) : option(riscv_exten
     else
       let%opt _ := oassert (ws' <= U32)%CMP in
       let%opt _ := oassert (is_load e) in
-      Some (BaseOp(None, LOAD Signed ws'), [:: e ])
+      Some (BaseOp(None, select_load Signed ws' e), [:: e ])
   | Ozeroext U32 ws' =>
     if use_B then
       let%opt _ := oassert (ws' <= U16)%CMP in
@@ -488,7 +500,7 @@ Definition lower_Papp2
 (* Lower an expression of the form [(ws)[v + e]] or [tab[ws e]]. *)
 Definition lower_load (ws: wsize) (e: pexpr) : option(riscv_extended_op * pexprs) :=
   let%opt _ := chk_ws_reg ws in
-  Some (BaseOp (None, LOAD Signed U32), [:: e ]).
+  Some (BaseOp (None, select_load Signed U32 e), [:: e ]).
 
 (* Lower an expression of the form [v].
    Precondition:
@@ -500,19 +512,25 @@ Definition lower_Pvar (ws : wsize) (v : gvar) : option(riscv_extended_op * pexpr
     if ws != U32 
         then None 
     else
-        let op := if is_var_in_memory (gv v) then LOAD Signed U32 else (if use_C then C_MV else MV) in
+        let op := if is_var_in_memory (gv v) then select_load Signed U32 (Pvar v) else (if use_C then C_MV else MV) in
         Some (BaseOp (None, op), [:: Pvar v ]).
 
 (* Convert an assignment into an architecture-specific operation. *)
 Definition lower_cassgn
   (lv : lval) (ws : wsize) (e : pexpr) : option (copn_args) :=
-  if is_lval_in_memory lv
-    then 
-      if (ws <= U32)%CMP
-        then
-          Some ([:: lv], Oriscv (STORE ws), [:: e])
-        else
-          None
+  if is_lval_in_memory lv then
+    if (ws <= U32)%CMP then
+      let default := Some ([:: lv], Oriscv (STORE ws), [:: e]) in
+      if use_C && (U32 <= ws)%CMP then
+        match lv with
+        | Lmem _ _ _ addr =>
+            if check_C_lw_sw_addr addr then
+              Some ([:: lv], Oasm (BaseOp (None, C_SW)), [:: e])
+            else default
+        | _ => default
+        end
+      else default
+    else None
   else
   let%opt (op, e) :=
     match e with

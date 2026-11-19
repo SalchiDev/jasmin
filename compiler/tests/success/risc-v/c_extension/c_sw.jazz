@@ -1,0 +1,9 @@
+export
+fn c_sw(reg u32 arg, reg u32 val) {
+    reg u32 x;
+    x = val;
+
+    [arg] = x;
+    [arg + 4] = x;
+    [arg + 124] = x;
+}

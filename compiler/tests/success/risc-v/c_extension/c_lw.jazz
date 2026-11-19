@@ -1,0 +1,15 @@
+export
+fn c_lw(reg u32 arg) -> reg u32 {
+    reg u32 x, y, z;
+
+    x = [arg];
+    y = [arg + 4];
+    z = [arg + 124];
+
+    y ^= z;
+    x ^= y;
+    
+    reg u32 res;
+    res = x;
+    return res;
+}
