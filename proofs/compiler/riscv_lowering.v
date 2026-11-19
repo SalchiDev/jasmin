@@ -209,8 +209,8 @@ Definition check_C_lui_value (e : pexpr) : option pexpr :=
 Fixpoint check_C_lw_sw_addr (addr : pexpr) : bool :=
   match addr with
   | Pvar _ => true
-  | Pload _ U32 e => check_C_lw_sw_addr e
   | Papp2 _ _ offset => check_C_imm U32 CI_lw_sw offset
+  | Pload _ U32 e => check_C_lw_sw_addr e
   | _ => false
   end.
 
