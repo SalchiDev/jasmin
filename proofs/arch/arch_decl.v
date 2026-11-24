@@ -124,6 +124,7 @@ Qed.
 Record rv_arch_exts := {
   rv_use_b : bool;
   rv_use_c : bool;
+  rv_use_m : bool;
 }.
 
 Variant arch_extensions :=

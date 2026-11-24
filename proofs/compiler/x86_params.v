@@ -140,10 +140,15 @@ Definition x86_loparams : lowering_params :=
   {|
     lop_lower_i := fun warning _options fv i =>
       lower_i warning fv i;
-    lop_check_extensions := fun _ _ _ => ok tt;
     lop_fvars_correct := fvars_correct;
   |}.
 
+(* ------------------------------------------------------------------------ *)
+(* Extension validation parameters. *)
+Definition x86_evp : extension_validation_params :=
+  {|
+    evp_check_extension := fun _ _ _ => ok tt;
+  |}.
 
 (* ------------------------------------------------------------------------ *)
 (* Speculative execution operator lowering parameters. *)
@@ -308,6 +313,7 @@ Definition x86_params : architecture_params :=
     ap_lip := x86_liparams;
     ap_plp := false;
     ap_lop := x86_loparams;
+    ap_evp := x86_evp;
     ap_lap := {| lap_lower_address := fun _ p => ok p |};
     ap_agp := x86_agparams;
     ap_szp := x86_szparams;

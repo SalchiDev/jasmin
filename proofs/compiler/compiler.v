@@ -39,7 +39,8 @@ Require Import
   tunneling
   unrolling
   wsize
-  wint_word.
+  wint_word
+  extension_validation.
 
 Require
   merge_varmaps.
@@ -324,10 +325,6 @@ Definition compiler_first_part (to_keep: seq funname) (p: uprog) : cexec uprog :
       (pp_internal_error_s "lowering" "lowering check fails")
   in
 
-  Let _ :=
-    lop_check_extensions loparams cparams.(arch_exts) pp
-  in
-
   let p :=
     lower_prog
       (lop_lower_i loparams)
@@ -336,6 +333,7 @@ Definition compiler_first_part (to_keep: seq funname) (p: uprog) : cexec uprog :
       (fresh_var_ident cparams (Reg (Normal, Direct)) dummy_instr_info 0)
       pp
   in
+  Let _ := check_extensions aparams.(ap_evp) cparams.(arch_exts) p in
   let p := cparams.(print_uprog) LowerInstruction p in
 
   Let p := propagate_inline.pi_prog p in

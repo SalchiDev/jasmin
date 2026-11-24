@@ -27,7 +27,7 @@ let introduce_export_renaming = ref true
 let print_dependencies = ref false
 let lazy_regalloc = ref false
 
-let arch_extensions = ref []
+let arch_extensions = ref ["m"]
 
 let set_arch_extensions s =
   arch_extensions := String.split_on_char ',' s
@@ -42,6 +42,7 @@ let get_arch_extensions target_arch =
         {
           Arch_decl.rv_use_b = has_ext "b";
           Arch_decl.rv_use_c = has_ext "c";
+          Arch_decl.rv_use_m = has_ext "m";
         }
   | _ -> Arch_decl.AE_NONE
 

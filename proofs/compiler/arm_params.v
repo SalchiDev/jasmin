@@ -174,10 +174,15 @@ Definition arm_fvars_correct
 Definition arm_loparams : lowering_params :=
   {|
     lop_lower_i _ _ := lower_i;
-    lop_check_extensions := fun _ _ _ => ok tt;
     lop_fvars_correct := arm_fvars_correct;
   |}.
 
+(* ------------------------------------------------------------------------ *)
+(* Extension validation parameters. *)
+Definition arm_evp : extension_validation_params :=
+  {|
+    evp_check_extension := fun _ _ _ => ok tt;
+  |}.
 
 (* ------------------------------------------------------------------------ *)
 (* Speculative execution operator lowering parameters. *)
@@ -320,6 +325,7 @@ Definition arm_params : architecture_params :=
     ap_lip := arm_liparams;
     ap_plp := false;
     ap_lop := arm_loparams;
+    ap_evp := arm_evp;
     ap_lap := {| lap_lower_address := fun _ p => ok p |};
     ap_agp := arm_agparams;
     ap_szp := arm_szparams;

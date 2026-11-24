@@ -23,11 +23,6 @@ Record lowering_params
       -> lowering.fresh_vars
       -> instr              (* Source instruction. *)
       -> cmd;
-
-    (* Check that the source program uses only enabled extensions. *)
-    lop_check_extensions :
-      arch_extensions
-      -> forall (pT : progT), @prog asm_op asmop pT -> cexec unit;
       
     (* Whether all fresh vars are different from each other and
      from those in a list of function declarations. *)
@@ -47,6 +42,16 @@ Record lower_addressing_params
       (string -> atype -> Ident.ident) -> _sprog -> cexec _sprog;
   }.
 
+Record extension_validation_params
+  `{asmop : asmOp} :=
+  {
+    evp_check_extension :
+      arch_extensions
+      -> instr_info
+      -> asm_op_t
+      -> cexec unit;
+  }.
+
 Record architecture_params
   `{asm_e : asm_extra} :=
   {
@@ -60,6 +65,9 @@ Record architecture_params
 
     (* Lowering parameters. Defined above. *)
     ap_lop : lowering_params;
+
+    (* Extension validation parameters. Defined above. *)
+    ap_evp : extension_validation_params;
 
     (* Speculative execution operator lowering parameters. See
        slh_lowering.v. *)

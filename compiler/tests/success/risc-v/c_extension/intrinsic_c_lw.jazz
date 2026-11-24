@@ -1,6 +1,6 @@
 export
 fn c_lw(reg u32 arg) -> reg u32 {
-    reg u32 x, y
+    reg u32 x, y;
 
     x = #C_LW([:u32 arg]);
 

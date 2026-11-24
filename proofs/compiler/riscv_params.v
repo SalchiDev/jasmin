@@ -27,7 +27,8 @@ Require Import
   riscv_params_core
   riscv_params_common
   riscv_stack_zeroization
-  riscv_lower_addressing.
+  riscv_lower_addressing
+  riscv_extension_validation.
 
 Section Section.
 Context {atoI : arch_toIdent}.
@@ -155,10 +156,15 @@ End LINEARIZATION.
 Definition riscv_loparams : lowering_params :=
   {|
     lop_lower_i _ options _ := lower_i options;
-    lop_check_extensions := check_riscv_program_extensions;
     lop_fvars_correct := fun _ _ _ => true; (* No fresh variable introduced *)
   |}.
 
+(* ------------------------------------------------------------------------ *)
+(* Extension validation parameters. *)
+Definition riscv_evp : extension_validation_params :=
+  {|
+    evp_check_extension := check_riscv_extension;
+  |}.
 
 (* ------------------------------------------------------------------------ *)
 (* Speculative execution operator lowering parameters. *)
@@ -277,6 +283,7 @@ Definition riscv_params : architecture_params :=
     ap_lip := riscv_liparams;
     ap_plp := true;
     ap_lop := riscv_loparams;
+    ap_evp := riscv_evp;
     ap_agp := riscv_agparams;
     ap_lap := riscv_laparams;
     ap_szp := riscv_szparams;

@@ -48,6 +48,7 @@ compiler/allocation.v
 compiler/allocation_proof.v
 compiler/arch_params.v
 compiler/arch_params_proof.v
+compiler/extension_validation.v
 compiler/arm_common.v
 compiler/arm_decl.v
 compiler/arm_extra.v
@@ -113,6 +114,7 @@ compiler/riscv_lower_addressing.v
 compiler/riscv_lower_addressing_proof.v
 compiler/riscv_lowering.v
 compiler/riscv_lowering_proof.v
+compiler/riscv_extension_validation.v
 compiler/riscv_params.v
 compiler/riscv_params_proof.v
 compiler/riscv_params_core.v
